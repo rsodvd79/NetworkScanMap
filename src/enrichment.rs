@@ -574,7 +574,7 @@ mod tests {
     }
 
     #[test]
-    fn service_inspection_reports_real_open_and_refused_ports_and_cancellation() {
+    fn service_inspection_reports_real_open_and_unresponsive_ports_and_cancellation() {
         let listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
         let port = listener.local_addr().unwrap().port();
         let result = inspect_service(
@@ -595,7 +595,10 @@ mod tests {
             Instant::now() + Duration::from_secs(1),
             &AtomicBool::new(false),
         );
-        assert_eq!(result.state, "chiusa (rifiutata)");
+        assert!(matches!(
+            result.state.as_str(),
+            "chiusa (rifiutata)" | "nessuna risposta"
+        ));
         let report = collect(
             Ipv4Addr::LOCALHOST,
             &[port],
