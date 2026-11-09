@@ -1,9 +1,12 @@
 pub mod app;
 pub mod diagram;
 pub mod discovery;
+pub mod enrichment;
 pub mod mac;
 pub mod model;
 pub mod monitor;
 pub mod platform;
 pub mod storage;
+pub mod telemetry;
 pub mod topology;
+pub mod trace;

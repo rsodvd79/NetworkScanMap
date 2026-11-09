@@ -28,6 +28,7 @@ pub struct Snapshot {
     pub warnings: Vec<String>,
     /// Only a complete observation may invalidate older evidence from this source.
     pub complete: bool,
+    pub telemetry: crate::telemetry::Telemetry,
 }
 
 impl Default for Snapshot {
@@ -41,6 +42,7 @@ impl Default for Snapshot {
             fdb: Vec::new(),
             warnings: Vec::new(),
             complete: false,
+            telemetry: crate::telemetry::Telemetry::default(),
         }
     }
 }
@@ -55,7 +57,7 @@ pub struct Adjacency {
 }
 
 /// Learned MAC on a bridge port; never sufficient evidence of direct adjacency.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct FdbEntry {
     pub mac: String,
     pub port: String,
@@ -65,6 +67,11 @@ pub struct FdbEntry {
 
 const SYSTEM_NAME: &[u32] = &[1, 3, 6, 1, 2, 1, 1, 5, 0];
 const SYSTEM_DESCRIPTION: &[u32] = &[1, 3, 6, 1, 2, 1, 1, 1, 0];
+const SYSTEM_UPTIME: &[u32] = &[1, 3, 6, 1, 2, 1, 1, 3, 0];
+const ENTITY: &[u32] = &[1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1];
+const IF_ENTRY: &[u32] = &[1, 3, 6, 1, 2, 1, 2, 2, 1];
+const IF_X_ENTRY: &[u32] = &[1, 3, 6, 1, 2, 1, 31, 1, 1, 1];
+const VLAN_NAMES: &[u32] = &[1, 3, 6, 1, 2, 1, 17, 7, 1, 4, 3, 1, 1];
 const CHASSIS_SUBTYPE: &[u32] = &[1, 0, 8802, 1, 1, 2, 1, 3, 1, 0];
 const CHASSIS_ID: &[u32] = &[1, 0, 8802, 1, 1, 2, 1, 3, 2, 0];
 const LLDP_LOCAL: &[u32] = &[1, 0, 8802, 1, 1, 2, 1, 3, 7, 1];
@@ -82,6 +89,8 @@ const MAX_TOTAL_ROWS: usize = 32768;
 #[derive(Clone, Debug)]
 enum Cell {
     Number(u32),
+    Counter64(u64),
+    Signed(i64),
     Bytes(Vec<u8>),
 }
 
@@ -112,10 +121,12 @@ fn oid_parts(value: &Oid<'_>) -> Result<Vec<u32>> {
 
 fn cell(value: Value<'_>) -> Result<Cell> {
     match value {
+        Value::Integer(n) if n < 0 => Ok(Cell::Signed(n)),
         Value::Integer(n) => u32::try_from(n)
             .map(Cell::Number)
             .map_err(|_| anyhow!("Intero SNMP fuori intervallo")),
         Value::Unsigned32(n) | Value::Counter32(n) | Value::Timeticks(n) => Ok(Cell::Number(n)),
+        Value::Counter64(n) => Ok(Cell::Counter64(n)),
         Value::OctetString(bytes) if bytes.len() <= 4096 => Ok(Cell::Bytes(bytes.to_vec())),
         Value::IpAddress(ip) => Ok(Cell::Bytes(ip.to_vec())),
         // LLDP capability bits and other unneeded table columns still have valid types.
@@ -241,10 +252,14 @@ fn get(session: &mut SyncSession, parts: &[u32]) -> Result<Cell> {
     if oid_parts(&name)? != parts || response.varbinds.next().is_some() {
         bail!("Risposta GET SNMP non corrispondente");
     }
-    if !matches!(
-        (&value, parts == CHASSIS_SUBTYPE),
-        (Value::Integer(_), true) | (Value::OctetString(_), false)
-    ) {
+    let valid = if parts == SYSTEM_UPTIME {
+        matches!(&value, Value::Timeticks(_))
+    } else if parts == CHASSIS_SUBTYPE {
+        matches!(&value, Value::Integer(_))
+    } else {
+        matches!(&value, Value::OctetString(_))
+    };
+    if !valid {
         bail!("Tipo del valore scalare SNMP non valido");
     }
     cell(value)
@@ -265,6 +280,7 @@ struct Collector<'a> {
     deadline: Instant,
     timeout: Duration,
     rows: usize,
+    row_limit: usize,
 }
 
 impl Collector<'_> {
@@ -298,7 +314,7 @@ impl Collector<'_> {
         // truncated varbind list snmp2's iterator can silently accept.
         loop {
             self.check(deadline)?;
-            if table.len() >= MAX_ROWS || self.rows >= MAX_TOTAL_ROWS {
+            if table.len() >= MAX_ROWS || self.rows >= self.row_limit {
                 bail!("Limite righe SNMP raggiunto");
             }
             let requested = oid(&current)?;
@@ -355,7 +371,42 @@ impl Collector<'_> {
 }
 
 fn valid_row(root: &[u32], index: &[u32], value: &Cell) -> bool {
+    // entPhysicalParentRelPos permits -1 (unknown); it must not prevent
+    // collecting the later manufacturer/model/revision columns.
+    if let Cell::Signed(n) = value {
+        return root == ENTITY && matches!(index, [6, 1..=u32::MAX]) && *n == -1;
+    }
+    if matches!(value, Cell::Counter64(_)) {
+        return root == IF_X_ENTRY && matches!(index, [6..=13, 1..=u32::MAX]);
+    }
     let numeric = matches!(value, Cell::Number(_));
+    if root == IF_ENTRY {
+        return matches!(index, [1..=22, 1..=u32::MAX])
+            && if matches!(index[0], 2 | 6 | 22) {
+                matches!(value, Cell::Bytes(_))
+            } else {
+                numeric
+            };
+    }
+    if root == IF_X_ENTRY {
+        return matches!(index, [1..=19, 1..=u32::MAX])
+            && match index[0] {
+                1 | 18 => matches!(value, Cell::Bytes(_)),
+                6..=13 => matches!(value, Cell::Counter64(_)),
+                _ => numeric,
+            };
+    }
+    if root == ENTITY {
+        return matches!(index, [1..=20, 1..=u32::MAX])
+            && if matches!(index[0], 9 | 10 | 12 | 13) {
+                matches!(value, Cell::Bytes(_))
+            } else {
+                !matches!(value, Cell::Counter64(_))
+            };
+    }
+    if root == VLAN_NAMES {
+        return matches!(index, [1..=4094]) && matches!(value, Cell::Bytes(_));
+    }
     if root == IF_NAME || root == IF_DESCRIPTION {
         return matches!(index, [1..=u32::MAX]) && !numeric;
     }
@@ -408,8 +459,119 @@ fn table(
     root: &[u32],
 ) -> Table {
     let (values, result) = collector.walk(root);
+    snapshot
+        .telemetry
+        .status(label, !values.is_empty() || result.is_ok(), result.is_ok());
     warning(snapshot, label, result);
     values
+}
+
+/// Optional telemetry never changes topology completeness.
+fn telemetry_table(
+    collector: &mut Collector<'_>,
+    snapshot: &mut Snapshot,
+    label: &str,
+    root: &[u32],
+) -> Table {
+    let (values, result) = collector.walk(root);
+    snapshot
+        .telemetry
+        .status(label, !values.is_empty() || result.is_ok(), result.is_ok());
+    if let Err(error) = result {
+        snapshot.warnings.push(format!("{label}: {error}"));
+    }
+    values
+}
+
+fn octets(value: Option<&Cell>) -> Option<crate::telemetry::Counter> {
+    use crate::telemetry::Counter;
+    match value? {
+        Cell::Number(value) => Some(Counter {
+            value: u64::from(*value),
+            width: 32,
+        }),
+        Cell::Counter64(value) => Some(Counter {
+            value: *value,
+            width: 64,
+        }),
+        _ => None,
+    }
+}
+
+fn telemetry_interfaces(
+    base: &Table,
+    extended: &Table,
+    names: &BTreeMap<u32, String>,
+) -> Vec<crate::telemetry::Interface> {
+    let indices = base
+        .keys()
+        .chain(extended.keys())
+        .filter_map(|key| match key.as_slice() {
+            [_, index] => Some(*index),
+            _ => None,
+        })
+        .collect::<BTreeSet<_>>();
+    indices
+        .into_iter()
+        .take(crate::telemetry::MAX_RECORDS)
+        .map(|index| {
+            let key = [index];
+            let base_number = |col| number(column(base, col, &key));
+            let high_speed = number(column(extended, 15, &key)).filter(|n| *n > 0);
+            crate::telemetry::Interface {
+                index,
+                name: bytes(column(extended, 1, &key))
+                    .map(text)
+                    .filter(|s| !s.is_empty())
+                    .or_else(|| names.get(&index).cloned())
+                    .or_else(|| bytes(column(base, 2, &key)).map(text))
+                    .unwrap_or_default(),
+                admin_status: base_number(7).filter(|s| (1..=3).contains(s)),
+                oper_status: base_number(8).filter(|s| (1..=7).contains(s)),
+                speed_bps: high_speed
+                    .map(|n| u64::from(n) * 1_000_000)
+                    .or_else(|| base_number(5).filter(|n| *n != u32::MAX).map(u64::from)),
+                rx_octets: octets(column(extended, 6, &key))
+                    .or_else(|| octets(column(base, 10, &key))),
+                tx_octets: octets(column(extended, 10, &key))
+                    .or_else(|| octets(column(base, 16, &key))),
+                rx_errors: base_number(14),
+                tx_errors: base_number(20),
+                rx_discards: base_number(13),
+                tx_discards: base_number(19),
+                discontinuity_ticks: number(column(extended, 19, &key)),
+                ..crate::telemetry::Interface::default()
+            }
+        })
+        .collect()
+}
+
+fn telemetry_entities(values: &Table) -> Vec<crate::telemetry::Entity> {
+    let indices = values
+        .keys()
+        .filter_map(|key| match key.as_slice() {
+            [9 | 10 | 12 | 13, index] => Some(*index),
+            _ => None,
+        })
+        .collect::<BTreeSet<_>>();
+    indices
+        .into_iter()
+        .take(crate::telemetry::MAX_RECORDS)
+        .map(|index| {
+            let field = |col| {
+                bytes(column(values, col, &[index]))
+                    .map(text)
+                    .unwrap_or_default()
+            };
+            crate::telemetry::Entity {
+                index,
+                manufacturer: field(12),
+                model: field(13),
+                software: field(10),
+                firmware: field(9),
+            }
+        })
+        .collect()
 }
 
 fn column<'a>(table: &'a Table, column: u32, index: &[u32]) -> Option<&'a Cell> {
@@ -608,6 +770,10 @@ fn fdb_entries(
         let contexts = if q_bridge { vlans.get(&index[0]) } else { None };
         if let Some(contexts) = contexts {
             for vlan in contexts {
+                if result.len() >= MAX_ROWS {
+                    valid = false;
+                    break;
+                }
                 result.insert(FdbEntry {
                     mac: address.clone(),
                     port: label.clone(),
@@ -615,6 +781,10 @@ fn fdb_entries(
                 });
             }
         } else {
+            if result.len() >= MAX_ROWS {
+                valid = false;
+                break;
+            }
             result.insert(FdbEntry {
                 mac: address,
                 port: label,
@@ -628,20 +798,25 @@ fn fdb_entries(
 /// Collect independent tables even if another is unsupported. Network errors and
 /// cancellation yield partial snapshots; invalid profiles/local socket setup fail.
 /// No retries; each receive is capped at two seconds, each walk at eight receives,
-/// and the entire collection at thirty seconds. No remote management IP is probed.
+/// and the entire collection at thirty seconds. The final ten seconds and 8192
+/// rows are reserved for telemetry, so topology cannot starve interface samples.
+/// No remote management IP is probed.
 pub fn collect(profile: &Profile, timeout: Duration, cancel: &AtomicBool) -> Result<Snapshot> {
     let session = session(profile, timeout)?;
     let timeout = timeout.min(Duration::from_secs(2));
+    let deadline = Instant::now() + Duration::from_secs(30);
     let mut collector = Collector {
         session,
         cancel,
-        deadline: Instant::now() + Duration::from_secs(30),
+        deadline: deadline - Duration::from_secs(10),
         timeout,
         rows: 0,
+        row_limit: MAX_TOTAL_ROWS - MAX_ROWS,
     };
     let mut snapshot = Snapshot {
         target: profile.target,
         complete: true,
+        telemetry: crate::telemetry::Telemetry::start_sample(),
         ..Snapshot::default()
     };
     for (parts, name) in [(SYSTEM_NAME, true), (SYSTEM_DESCRIPTION, false)] {
@@ -720,10 +895,158 @@ pub fn collect(profile: &Profile, timeout: Duration, cancel: &AtomicBool) -> Res
             Err(anyhow!("Righe FDB incomplete o porte non risolte")),
         );
     }
+    let fdb_complete = [
+        "BRIDGE porte",
+        "BRIDGE FDB",
+        "Q-BRIDGE FDB",
+        "Q-BRIDGE VLAN",
+    ]
+    .iter()
+    .all(|label| {
+        snapshot
+            .telemetry
+            .tables
+            .get(*label)
+            .is_some_and(|s| s.complete)
+    });
+    snapshot.telemetry.status(
+        "FDB",
+        !snapshot.fdb.is_empty() || fdb_complete,
+        fdb_complete && valid && q_valid && snapshot.fdb.len() <= crate::telemetry::MAX_RECORDS,
+    );
+    snapshot.telemetry.fdb = snapshot
+        .fdb
+        .iter()
+        .take(crate::telemetry::MAX_RECORDS)
+        .cloned()
+        .collect();
     if cancel.load(Ordering::Relaxed) {
         snapshot.complete = false;
     }
+    collector.deadline = deadline;
+    collector.row_limit = MAX_TOTAL_ROWS;
+    collect_interface_telemetry(&mut collector, &mut snapshot, &interfaces);
+    let entities = telemetry_table(&mut collector, &mut snapshot, "ENTITY-MIB", ENTITY);
+    snapshot.telemetry.entities = telemetry_entities(&entities);
+    let entity_complete = !snapshot.telemetry.entities.is_empty()
+        && snapshot.telemetry.entities.iter().all(|e| {
+            !e.manufacturer.is_empty()
+                && !e.model.is_empty()
+                && !e.software.is_empty()
+                && !e.firmware.is_empty()
+        });
+    snapshot.telemetry.status(
+        "ENTITY-MIB dati",
+        !snapshot.telemetry.entities.is_empty(),
+        entity_complete,
+    );
+    let vlans = telemetry_table(&mut collector, &mut snapshot, "VLAN nomi", VLAN_NAMES);
+    let mut vlan_records = BTreeMap::new();
+    for key in vlan_fdb.keys() {
+        if let [_, id @ 1..=4094] = key.as_slice() {
+            vlan_records.insert(
+                *id,
+                crate::telemetry::Vlan {
+                    id: *id,
+                    name: String::new(),
+                },
+            );
+        }
+    }
+    for (key, value) in &vlans {
+        if let [id] = key.as_slice()
+            && let Some(value) = bytes(Some(value))
+        {
+            vlan_records.insert(
+                *id,
+                crate::telemetry::Vlan {
+                    id: *id,
+                    name: text(value),
+                },
+            );
+        }
+    }
+    snapshot.telemetry.vlans = vlan_records
+        .into_values()
+        .take(crate::telemetry::MAX_RECORDS)
+        .collect();
     Ok(snapshot)
+}
+
+/// Periodic, read-only interface sample with the same thirty-second/row limits.
+/// Never collects LLDP, FDB, ENTITY-MIB or VLAN tables and returns no topology
+/// snapshot; merging the result cannot invalidate links. Excluded tables are
+/// unavailable for this sample, so `Telemetry::merge` retains their old values.
+pub fn collect_telemetry(
+    profile: &Profile,
+    timeout: Duration,
+    cancel: &AtomicBool,
+) -> Result<crate::telemetry::Telemetry> {
+    let session = session(profile, timeout)?;
+    let mut collector = Collector {
+        session,
+        cancel,
+        deadline: Instant::now() + Duration::from_secs(30),
+        timeout: timeout.min(Duration::from_secs(2)),
+        rows: 0,
+        row_limit: MAX_TOTAL_ROWS,
+    };
+    let mut snapshot = Snapshot {
+        telemetry: crate::telemetry::Telemetry::start_sample(),
+        ..Snapshot::default()
+    };
+    collect_interface_telemetry(&mut collector, &mut snapshot, &BTreeMap::new());
+    for label in [
+        "ENTITY-MIB",
+        "ENTITY-MIB dati",
+        "VLAN nomi",
+        "Q-BRIDGE VLAN",
+        "FDB",
+    ] {
+        snapshot.telemetry.status(label, false, false);
+    }
+    Ok(snapshot.telemetry)
+}
+
+fn collect_interface_telemetry(
+    collector: &mut Collector<'_>,
+    snapshot: &mut Snapshot,
+    interfaces: &BTreeMap<u32, String>,
+) {
+    match collector.scalar(SYSTEM_UPTIME) {
+        Ok(Cell::Number(ticks)) => {
+            snapshot.telemetry.uptime_ticks = Some(ticks);
+            snapshot.telemetry.status("sysUpTime", true, true);
+        }
+        _ => {
+            snapshot.telemetry.status("sysUpTime", false, false);
+            snapshot
+                .warnings
+                .push("sysUpTime: Dati non disponibili".into());
+        }
+    }
+    let base = telemetry_table(collector, snapshot, "IF-MIB contatori", IF_ENTRY);
+    let extended = telemetry_table(collector, snapshot, "IF-MIB estesa", IF_X_ENTRY);
+    snapshot.telemetry.interfaces = telemetry_interfaces(&base, &extended, interfaces);
+    let interface_complete = !snapshot.telemetry.interfaces.is_empty()
+        && snapshot.telemetry.interfaces.iter().all(|p| {
+            p.admin_status.is_some()
+                && p.oper_status.is_some()
+                && p.speed_bps.is_some()
+                && p.rx_octets.is_some()
+                && p.tx_octets.is_some()
+                && p.rx_errors.is_some()
+                && p.tx_errors.is_some()
+                && p.rx_discards.is_some()
+                && p.tx_discards.is_some()
+                && p.discontinuity_ticks.is_some()
+        });
+    snapshot.telemetry.status(
+        "IF-MIB dati",
+        !snapshot.telemetry.interfaces.is_empty(),
+        interface_complete,
+    );
+    snapshot.telemetry.finish_sample();
 }
 
 #[cfg(test)]
@@ -736,6 +1059,127 @@ mod tests {
         let mut key = vec![column];
         key.extend_from_slice(index);
         table.insert(key, value);
+    }
+
+    #[test]
+    fn telemetry_parser_prefers_high_capacity_and_preserves_counter_width() {
+        let mut base = Table::new();
+        for (col, value) in [
+            (5, 1_000_000_000),
+            (7, 1),
+            (8, 2),
+            (10, 123),
+            (16, 456),
+            (13, 3),
+            (14, 4),
+            (19, 5),
+            (20, 6),
+        ] {
+            put(&mut base, col, &[7], Cell::Number(value));
+        }
+        let mut extended = Table::new();
+        put(
+            &mut extended,
+            6,
+            &[7],
+            cell(Value::Counter64(1 << 40)).unwrap(),
+        );
+        put(&mut extended, 10, &[7], Cell::Counter64(1 << 41));
+        put(&mut extended, 15, &[7], Cell::Number(10_000));
+        put(&mut extended, 19, &[7], Cell::Number(100));
+        let parsed = telemetry_interfaces(&base, &extended, &BTreeMap::new());
+        assert_eq!(
+            parsed[0].rx_octets,
+            Some(crate::telemetry::Counter {
+                value: 1 << 40,
+                width: 64
+            })
+        );
+        assert_eq!(parsed[0].speed_bps, Some(10_000_000_000));
+        assert_eq!(
+            (parsed[0].admin_status, parsed[0].oper_status),
+            (Some(1), Some(2))
+        );
+        assert_eq!(
+            (parsed[0].rx_errors, parsed[0].tx_discards),
+            (Some(4), Some(5))
+        );
+        assert_eq!(parsed[0].discontinuity_ticks, Some(100));
+        let fallback = telemetry_interfaces(&base, &Table::new(), &BTreeMap::new());
+        assert_eq!(
+            fallback[0].rx_octets,
+            Some(crate::telemetry::Counter {
+                value: 123,
+                width: 32
+            })
+        );
+    }
+
+    #[test]
+    fn telemetry_entity_and_vlan_validation_keeps_actual_values() {
+        let mut values = Table::new();
+        for (col, value) in [
+            (9, "firmware-2"),
+            (10, "software-3"),
+            (12, "Vendor"),
+            (13, "Model-X"),
+        ] {
+            put(
+                &mut values,
+                col,
+                &[1],
+                Cell::Bytes(value.as_bytes().to_vec()),
+            );
+        }
+        let parsed = telemetry_entities(&values);
+        assert_eq!(
+            (
+                parsed[0].manufacturer.as_str(),
+                parsed[0].model.as_str(),
+                parsed[0].software.as_str(),
+                parsed[0].firmware.as_str()
+            ),
+            ("Vendor", "Model-X", "software-3", "firmware-2")
+        );
+        assert!(valid_row(
+            ENTITY,
+            &[6, 1],
+            &cell(Value::Integer(-1)).unwrap()
+        ));
+        assert!(valid_row(
+            VLAN_NAMES,
+            &[4094],
+            &Cell::Bytes(b"voice".to_vec())
+        ));
+        assert!(!valid_row(VLAN_NAMES, &[4095], &Cell::Bytes(Vec::new())));
+        assert!(!valid_row(IF_X_ENTRY, &[6, 1], &Cell::Number(1)));
+        assert!(!valid_row(IF_ENTRY, &[10, 1], &Cell::Counter64(1)));
+    }
+
+    #[test]
+    fn optional_telemetry_failure_does_not_invalidate_topology() {
+        let profile = Profile {
+            target: Ipv4Addr::LOCALHOST,
+            port: 161,
+            community: "test".into(),
+        };
+        let cancel = AtomicBool::new(true);
+        let mut collector = Collector {
+            session: session(&profile, Duration::from_millis(10)).unwrap(),
+            cancel: &cancel,
+            deadline: Instant::now() + Duration::from_secs(1),
+            timeout: Duration::from_millis(10),
+            rows: 0,
+            row_limit: MAX_TOTAL_ROWS,
+        };
+        let mut snapshot = Snapshot {
+            complete: true,
+            ..Snapshot::default()
+        };
+        let values = telemetry_table(&mut collector, &mut snapshot, "ENTITY-MIB", ENTITY);
+        assert!(values.is_empty());
+        assert!(snapshot.complete);
+        assert!(!snapshot.telemetry.tables["ENTITY-MIB"].available);
     }
 
     #[test]
@@ -888,6 +1332,7 @@ mod tests {
             deadline: Instant::now() + Duration::from_secs(2),
             timeout: Duration::from_millis(200),
             rows: 0,
+            row_limit: MAX_TOTAL_ROWS,
         };
         let (rows, result) = collector.walk(LLDP_REMOTE);
         assert!(rows.is_empty());
@@ -896,6 +1341,7 @@ mod tests {
     }
 
     fn binding(name: &[u32], value: Option<&Cell>, end: bool) -> Vec<u8> {
+        let uptime = name == SYSTEM_UPTIME;
         let name = oid(name).unwrap();
         let mut pair = vec![6, name.as_bytes().len() as u8];
         pair.extend_from_slice(name.as_bytes());
@@ -906,14 +1352,144 @@ mod tests {
             }
             Some(Cell::Number(value)) => {
                 assert!(*value < 128);
-                pair.extend_from_slice(&[2, 1, *value as u8]);
+                pair.extend_from_slice(&[if uptime { 0x43 } else { 2 }, 1, *value as u8]);
             }
+            Some(Cell::Counter64(value)) => {
+                let bytes = value.to_be_bytes();
+                let first = bytes
+                    .iter()
+                    .position(|b| *b != 0)
+                    .unwrap_or(bytes.len() - 1);
+                let bytes = &bytes[first..];
+                let padding = usize::from(bytes[0] & 0x80 != 0);
+                pair.extend_from_slice(&[0x46, (bytes.len() + padding) as u8]);
+                if padding != 0 {
+                    pair.push(0);
+                }
+                pair.extend_from_slice(bytes);
+            }
+            Some(Cell::Signed(_)) => panic!("Unsupported fixture value"),
             None => pair.extend_from_slice(&[if end { 0x82 } else { 0x80 }, 0]),
         }
         assert!(pair.len() < 128);
         let mut result = vec![0x30, pair.len() as u8];
         result.extend_from_slice(&pair);
         result
+    }
+
+    #[test]
+    fn periodic_collection_requests_only_uptime_and_interface_tables() {
+        let socket = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        socket
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let profile = Profile {
+            target: Ipv4Addr::LOCALHOST,
+            port: socket.local_addr().unwrap().port(),
+            community: "periodic-test-secret".into(),
+        };
+        let mut values = Table::from([(SYSTEM_UPTIME.to_vec(), Cell::Number(100))]);
+        for (root, suffix, value) in [
+            (IF_ENTRY, [2, 7], Cell::Bytes(b"eth7".to_vec())),
+            (IF_ENTRY, [5, 7], Cell::Number(100)),
+            (IF_ENTRY, [7, 7], Cell::Number(1)),
+            (IF_ENTRY, [8, 7], Cell::Number(1)),
+            (IF_ENTRY, [10, 7], Cell::Number(10)),
+            (IF_ENTRY, [13, 7], Cell::Number(0)),
+            (IF_ENTRY, [14, 7], Cell::Number(0)),
+            (IF_ENTRY, [16, 7], Cell::Number(20)),
+            (IF_ENTRY, [19, 7], Cell::Number(0)),
+            (IF_ENTRY, [20, 7], Cell::Number(0)),
+            (IF_X_ENTRY, [1, 7], Cell::Bytes(b"uplink".to_vec())),
+            (IF_X_ENTRY, [6, 7], Cell::Counter64(100)),
+            (IF_X_ENTRY, [10, 7], Cell::Counter64(200)),
+            (IF_X_ENTRY, [15, 7], Cell::Number(1)),
+            (IF_X_ENTRY, [19, 7], Cell::Number(0)),
+        ] {
+            values.insert(root.iter().copied().chain(suffix).collect(), value);
+        }
+        let worker = thread::spawn(move || {
+            let mut buffer = [0; 2048];
+            for _ in 0..values.len() + 2 {
+                let (size, peer) = socket.recv_from(&mut buffer).unwrap();
+                let mut request = Pdu::from_bytes(&buffer[..size]).unwrap();
+                let (name, _) = request.varbinds.clone().next().unwrap();
+                let name = oid_parts(&name).unwrap();
+                let encoded = match request.message_type {
+                    MessageType::GetRequest => {
+                        assert_eq!(name, SYSTEM_UPTIME);
+                        binding(&name, values.get(&name), false)
+                    }
+                    MessageType::GetNextRequest => {
+                        let root = [IF_ENTRY, IF_X_ENTRY]
+                            .into_iter()
+                            .find(|root| name.starts_with(root))
+                            .expect("Forbidden periodic table");
+                        if let Some((next, value)) = values.iter().find(|(next, _)| {
+                            next.as_slice() > name.as_slice() && next.starts_with(root)
+                        }) {
+                            binding(next, Some(value), false)
+                        } else {
+                            binding(&name, None, true)
+                        }
+                    }
+                    _ => panic!("Non-read-only periodic request"),
+                };
+                request.message_type = MessageType::Response;
+                request.varbinds = snmp2::Varbinds::from_bytes(&encoded);
+                socket.send_to(&request.to_bytes().unwrap(), peer).unwrap();
+            }
+        });
+        let sample = collect_telemetry(
+            &profile,
+            Duration::from_millis(100),
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+        worker.join().unwrap();
+        assert_eq!(sample.uptime_ticks, Some(100));
+        assert_eq!(sample.interfaces[0].name, "uplink");
+        assert_eq!(
+            sample.interfaces[0].rx_octets,
+            Some(crate::telemetry::Counter {
+                value: 100,
+                width: 64
+            })
+        );
+        assert_eq!(sample.interfaces[0].speed_bps, Some(1_000_000));
+        assert!(sample.tables["IF-MIB dati"].complete);
+        assert!(!sample.tables["ENTITY-MIB"].available);
+        assert!(!sample.tables["FDB"].available);
+        assert!(sample.validate().is_ok());
+        assert!(!format!("{sample:?}").contains(&profile.community));
+    }
+
+    #[test]
+    fn periodic_cancellation_and_row_bounds_send_no_requests() {
+        let socket = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        socket
+            .set_read_timeout(Some(Duration::from_millis(10)))
+            .unwrap();
+        let profile = Profile {
+            target: Ipv4Addr::LOCALHOST,
+            port: socket.local_addr().unwrap().port(),
+            community: "test".into(),
+        };
+        let sample =
+            collect_telemetry(&profile, Duration::from_millis(10), &AtomicBool::new(true)).unwrap();
+        assert!(sample.interfaces.is_empty());
+        assert!(!sample.tables["sysUpTime"].available);
+        let cancel = AtomicBool::new(false);
+        let mut collector = Collector {
+            session: session(&profile, Duration::from_millis(10)).unwrap(),
+            cancel: &cancel,
+            deadline: Instant::now() + Duration::from_secs(1),
+            timeout: Duration::from_millis(10),
+            rows: 0,
+            row_limit: 0,
+        };
+        assert!(collector.walk(IF_ENTRY).1.is_err());
+        assert!(socket.recv_from(&mut [0; 2048]).is_err());
     }
 
     fn collect_mock_topology(include_management: bool) -> (Profile, Snapshot) {
@@ -964,7 +1540,8 @@ mod tests {
             let mut buffer = [0; 2048];
             // Four scalars, seven LLDP rows, three LLDP terminators, six
             // independently unsupported IF/BRIDGE/Q-BRIDGE walks.
-            for _ in 0..(19 + usize::from(include_management)) {
+            // Optional uptime and four independent telemetry walks.
+            for _ in 0..(24 + usize::from(include_management)) {
                 let (size, peer) = socket.recv_from(&mut buffer).unwrap();
                 let mut request = Pdu::from_bytes(&buffer[..size]).unwrap();
                 let (name, _) = request.varbinds.clone().next().unwrap();

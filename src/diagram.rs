@@ -1,6 +1,6 @@
 use crate::model::{LinkKind, Map, Status};
 use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 pub struct Diagram {
     pub selected: Option<u64>,
@@ -28,14 +28,93 @@ impl Diagram {
     }
 
     pub fn rearrange(&mut self, map: &mut Map) {
+        let by_id: HashMap<_, _> = map
+            .devices
+            .iter()
+            .enumerate()
+            .map(|(index, device)| (device.id, index))
+            .collect();
+        let mut neighbors = vec![BTreeSet::new(); map.devices.len()];
+        let mut sources = BTreeSet::new();
+        for link in map.links.iter().filter(|link| !link.stale) {
+            let (Some(&from), Some(&to)) = (by_id.get(&link.from), by_id.get(&link.to)) else {
+                continue;
+            };
+            if from == to || map.devices[from].context != map.devices[to].context {
+                continue;
+            }
+            neighbors[from].insert(to);
+            neighbors[to].insert(from);
+            if link.kind != LinkKind::Manual
+                && let Some(&source) = by_id.get(&link.source)
+                && (source == from || source == to)
+            {
+                sources.insert(source);
+            }
+        }
+        // Connectivity is a layout hint, not an additional claim about device type.
+        let mut hubs: Vec<_> = (0..map.devices.len())
+            .filter(|&index| {
+                neighbors[index].len() > 1
+                    || (sources.contains(&index)
+                        && neighbors[index].len() == 1
+                        && neighbors[index]
+                            .first()
+                            .is_some_and(|&other| neighbors[other].len() == 1))
+            })
+            .collect();
+        hubs.sort_by_key(|&index| {
+            (
+                map.devices[index].context.clone(),
+                std::cmp::Reverse(neighbors[index].len()),
+                map.devices[index].id,
+            )
+        });
+        // Reciprocal observations of an isolated pair need only one center.
+        let mut centers = Vec::new();
+        let mut chosen = BTreeSet::new();
+        for index in hubs {
+            if neighbors[index].len() != 1
+                || !neighbors[index].iter().any(|other| chosen.contains(other))
+            {
+                chosen.insert(index);
+                centers.push(index);
+            }
+        }
+        let mut placed = chosen;
+        let mut y = 0.0;
+        for &center in &centers {
+            let leaves: Vec<_> = neighbors[center]
+                .iter()
+                .copied()
+                .filter(|index| !placed.contains(index))
+                .collect();
+            let radius = if leaves.is_empty() {
+                0.0
+            } else {
+                (leaves.len() as f32 * 200.0 / std::f32::consts::TAU).max(180.0)
+            };
+            map.devices[center].position = [radius, y + radius];
+            for (slot, &index) in leaves.iter().enumerate() {
+                let angle = std::f32::consts::TAU * slot as f32 / leaves.len() as f32;
+                map.devices[index].position = [
+                    radius + radius * angle.cos(),
+                    y + radius + radius * angle.sin(),
+                ];
+                placed.insert(index);
+            }
+            y += radius * 2.0 + 220.0;
+        }
         let mut groups: BTreeMap<(String, String), Vec<usize>> = BTreeMap::new();
         for (index, d) in map.devices.iter().enumerate() {
+            if placed.contains(&index) {
+                continue;
+            }
             groups
                 .entry((d.context.clone(), d.group.clone()))
                 .or_default()
                 .push(index);
         }
-        let mut y = 0.0;
         for indices in groups.values() {
             for (slot, index) in indices.iter().enumerate() {
                 map.devices[*index].position =
@@ -234,7 +313,7 @@ impl Diagram {
                     Color32::WHITE,
                 );
                 painter.text(
-                    rect.center(),
+                    rect.center() - Vec2::new(0.0, 16.0 * self.zoom),
                     Align2::CENTER_CENTER,
                     device
                         .ip
@@ -243,10 +322,32 @@ impl Diagram {
                     Color32::LIGHT_GRAY,
                 );
                 painter.text(
-                    rect.center() + Vec2::new(0.0, 18.0 * self.zoom),
+                    rect.center(),
                     Align2::CENTER_CENTER,
                     device.mac.as_deref().unwrap_or("MAC: non disponibile"),
                     FontId::monospace((10.0 * self.zoom).clamp(7.0, 16.0)),
+                    Color32::LIGHT_GRAY,
+                );
+                let latency = device.last_latency_us.map_or_else(
+                    || "Ping: non disponibile".into(),
+                    |microseconds| {
+                        let method = if device.last_method == "ICMP" {
+                            "Ping"
+                        } else {
+                            device
+                                .last_method
+                                .split_whitespace()
+                                .next()
+                                .unwrap_or("Risposta")
+                        };
+                        format!("{method}: {}", crate::model::latency_label(microseconds))
+                    },
+                );
+                painter.text(
+                    rect.center() + Vec2::new(0.0, 17.0 * self.zoom),
+                    Align2::CENTER_CENTER,
+                    latency,
+                    FontId::proportional((10.0 * self.zoom).clamp(7.0, 16.0)),
                     Color32::LIGHT_GRAY,
                 );
                 painter.text(
@@ -280,11 +381,12 @@ impl Diagram {
                 },
             );
             response.on_hover_text(format!(
-                "{}\nMAC: {}\n{}\n{}\n{}\n{}\nUltima risposta: {:?}\n{}",
+                "{}\nMAC: {}\n{}\n{}\n{}\n{}\n{}\nUltima risposta: {:?}\n{}",
                 label,
                 device.mac.as_deref().unwrap_or("Non disponibile"),
                 mac_details,
                 latency,
+                device.ping.summary(),
                 device.status.label(),
                 device.last_method,
                 device.last_seen,
@@ -301,39 +403,149 @@ impl Diagram {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Observation;
-    #[test]
-    fn available_mac_is_drawn_on_the_device_node() {
+    use crate::model::{Link, Observation};
+
+    fn layout_map() -> Map {
         let mut map = Map::default();
-        let mac = "02:03:04:05:06:07";
-        map.merge(Observation {
-            ip: Some(std::net::Ipv4Addr::LOCALHOST),
-            context: "test".into(),
-            group: "test".into(),
-            mac: Some(mac.into()),
-            chassis: None,
-            name: "Host".into(),
-            description: String::new(),
-            method: "TCP".into(),
-            responding: true,
-        });
-        let ctx = egui::Context::default();
-        let mut diagram = Diagram::default();
-        let mut output = ctx.run_ui(
-            egui::RawInput {
-                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))),
-                ..Default::default()
-            },
-            |ui| {
-                diagram.show(ui, &mut map);
-            },
-        );
-        let drawn = output.shapes.iter().any(|s| match &s.shape {
-            egui::epaint::Shape::Text(text) => text.galley.job.text.contains(mac),
-            _ => false,
-        });
-        output.textures_delta.clear();
-        assert!(drawn);
+        for index in 0..8 {
+            map.merge(Observation {
+                ip: Some(std::net::Ipv4Addr::new(192, 0, 2, index + 1)),
+                context: "test".into(),
+                group: if index == 3 { "Vicini LLDP" } else { "LAN" }.into(),
+                mac: None,
+                chassis: None,
+                name: format!("Apparato {index}"),
+                description: String::new(),
+                method: String::new(),
+                responding: false,
+            });
+        }
+        map
+    }
+
+    #[test]
+    fn connected_devices_surround_each_switch_without_overlap_or_moving_twice() {
+        for kind in [LinkKind::Observed, LinkKind::Inferred, LinkKind::Manual] {
+            let mut map = layout_map();
+            for (from, to) in [(1, 2), (1, 3), (1, 4), (5, 6), (5, 7), (1, 5)] {
+                map.add_link(Link {
+                    from,
+                    to,
+                    from_port: String::new(),
+                    to_port: String::new(),
+                    kind,
+                    evidence: String::new(),
+                    source: from,
+                    last_seen: 0,
+                    stale: false,
+                });
+            }
+            let mut diagram = Diagram::default();
+            diagram.rearrange(&mut map);
+            for (center, leaves) in [(0, &[1, 2, 3][..]), (4, &[5, 6][..])] {
+                let center = Vec2::from(map.devices[center].position);
+                let mut average = Vec2::ZERO;
+                for &leaf in leaves {
+                    let position = Vec2::from(map.devices[leaf].position);
+                    assert!(((position - center).length() - 180.0).abs() < 0.01);
+                    average += position;
+                }
+                assert!((average / leaves.len() as f32 - center).length() < 0.01);
+            }
+            for (index, device) in map.devices.iter().enumerate() {
+                let rect = Rect::from_min_size(Pos2::from(device.position), Vec2::new(150.0, 88.0));
+                for other in &map.devices[index + 1..] {
+                    assert!(!rect.intersects(Rect::from_min_size(
+                        Pos2::from(other.position),
+                        Vec2::new(150.0, 88.0),
+                    )));
+                }
+            }
+            let positions: Vec<_> = map.devices.iter().map(|d| d.position).collect();
+            diagram.rearrange(&mut map);
+            assert_eq!(
+                positions,
+                map.devices.iter().map(|d| d.position).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    fn isolated_gateway_pair_uses_source_as_center_but_ignores_stale_and_cross_context_links() {
+        let mut map = layout_map();
+        map.devices[7].context = "Altra rete".into();
+        for (from, to, stale) in [(2, 1, false), (2, 3, true), (2, 8, false)] {
+            map.add_link(Link {
+                from,
+                to,
+                from_port: String::new(),
+                to_port: String::new(),
+                kind: LinkKind::Inferred,
+                evidence: String::new(),
+                source: from,
+                last_seen: 0,
+                stale,
+            });
+        }
+        Diagram::default().rearrange(&mut map);
+        assert_eq!(map.devices[1].position, [180.0, 180.0]);
+        assert_eq!(map.devices[0].position, [360.0, 180.0]);
+        assert!(map.devices[2].position[1] > 360.0);
+        assert!(map.devices[7].position[1] > 360.0);
+    }
+
+    #[test]
+    fn mac_and_response_time_are_drawn_inside_the_device_node() {
+        for (method, latency, expected) in [
+            ("ICMP", Some(420), "Ping: 0.42 ms"),
+            ("ICMP", Some(0), "Ping: <1 ms"),
+            ("TCP 443", Some(1250), "TCP: 1.25 ms"),
+            ("SNMPv2c", Some(2000), "SNMPv2c: 2.00 ms"),
+            ("", None, "Ping: non disponibile"),
+        ] {
+            let mut map = Map::default();
+            let mac = "02:03:04:05:06:07";
+            map.merge(Observation {
+                ip: Some(std::net::Ipv4Addr::LOCALHOST),
+                context: "test".into(),
+                group: "test".into(),
+                mac: Some(mac.into()),
+                chassis: None,
+                name: "Host".into(),
+                description: String::new(),
+                method: method.into(),
+                responding: true,
+            });
+            map.devices[0].last_latency_us = latency;
+            let ctx = egui::Context::default();
+            let mut diagram = Diagram::default();
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))),
+                    ..Default::default()
+                },
+                |ui| {
+                    diagram.show(ui, &mut map);
+                },
+            );
+            let node = Rect::from_min_size(
+                Pos2::ZERO + diagram.offset,
+                Vec2::new(150.0, 88.0) * diagram.zoom,
+            );
+            for expected in [mac, expected] {
+                assert!(
+                    output.shapes.iter().any(|s| match &s.shape {
+                        egui::epaint::Shape::Text(text) => {
+                            text.galley.job.text == expected
+                                && node.contains_rect(text.visual_bounding_rect())
+                        }
+                        _ => false,
+                    }),
+                    "Testo assente o fuori dal nodo: {expected}"
+                );
+            }
+            output.textures_delta.clear();
+        }
     }
     #[test]
     fn canvas_renders_five_hundred_nodes_and_fit_without_network() {

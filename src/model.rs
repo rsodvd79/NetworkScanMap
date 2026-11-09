@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{net::Ipv4Addr, time::SystemTime};
+use std::{collections::VecDeque, net::Ipv4Addr, time::SystemTime};
 
 pub fn now() -> u64 {
     SystemTime::now()
@@ -16,6 +16,61 @@ pub fn latency_label(microseconds: u64) -> String {
     }
 }
 
+pub const PING_SAMPLE_LIMIT: usize = 100;
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct PingStats {
+    /// A timeout is None; unavailable, disabled and cancelled probes are excluded.
+    pub samples: VecDeque<Option<u64>>,
+}
+
+impl PingStats {
+    pub fn record(&mut self, latency_us: Option<u64>) {
+        while self.samples.len() >= PING_SAMPLE_LIMIT {
+            self.samples.pop_front();
+        }
+        self.samples.push_back(latency_us);
+    }
+
+    pub fn summary(&self) -> String {
+        let sent = self.samples.len();
+        if sent == 0 {
+            return "Ping ICMP: nessuna misura".into();
+        }
+        let replies: Vec<_> = self.samples.iter().flatten().copied().collect();
+        let received = replies.len();
+        let loss = (sent - received) as f64 * 100.0 / sent as f64;
+        let mut summary = format!(
+            "Ping ICMP: ultime {sent} sonde registrate\nRisposte: {received}/{sent}\nPerdita ping: {loss:.1}%"
+        );
+        if let (Some(min), Some(max)) = (replies.iter().min(), replies.iter().max()) {
+            let mean = replies.iter().map(|&rtt| rtt as f64).sum::<f64>() / received as f64;
+            summary.push_str(&format!(
+                "\nRTT min/medio/max: {} / {:.2} ms / {}",
+                latency_label(*min),
+                mean / 1000.0,
+                latency_label(*max),
+            ));
+            if received > 1 {
+                let variance = replies
+                    .iter()
+                    .map(|&rtt| (rtt as f64 - mean).powi(2))
+                    .sum::<f64>()
+                    / received as f64;
+                summary.push_str(&format!(
+                    "\nVariabilita RTT (dev. std.): {:.2} ms",
+                    variance.sqrt() / 1000.0,
+                ));
+            } else {
+                summary.push_str("\nVariabilita RTT: servono almeno 2 risposte");
+            }
+        } else {
+            summary.push_str("\nRTT e variabilita: non disponibili");
+        }
+        summary
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub networks: String,
@@ -28,6 +83,8 @@ pub struct Settings {
     pub failure_threshold: u32,
     pub tcp_ports: Vec<u16>,
     pub icmp: bool,
+    #[serde(default)]
+    pub enrich_scan: bool,
 }
 
 impl Default for Settings {
@@ -43,6 +100,7 @@ impl Default for Settings {
             failure_threshold: 3,
             tcp_ports: vec![22, 80, 443],
             icmp: true,
+            enrich_scan: false,
         }
     }
 }
@@ -119,6 +177,14 @@ pub struct Device {
     pub last_method: String,
     #[serde(default)]
     pub last_latency_us: Option<u64>,
+    #[serde(default)]
+    pub ping: PingStats,
+    #[serde(default)]
+    pub inventory: crate::enrichment::Report,
+    #[serde(default)]
+    pub telemetry: crate::telemetry::Telemetry,
+    #[serde(default)]
+    pub trace: Option<crate::trace::TraceReport>,
     pub historical_status: Status,
     #[serde(default)]
     pub manual: bool,
@@ -134,6 +200,13 @@ impl Device {
             self.custom_name.clone()
         } else if !self.name.is_empty() {
             self.name.clone()
+        } else if let Some(name) = self
+            .inventory
+            .dns_name
+            .as_ref()
+            .or(self.inventory.mdns_name.as_ref())
+        {
+            name.clone()
         } else {
             self.ip
                 .map_or_else(|| "Vicino LLDP".into(), |ip| ip.to_string())
@@ -322,6 +395,10 @@ impl Map {
                     last_seen: None,
                     last_method: String::new(),
                     last_latency_us: None,
+                    ping: PingStats::default(),
+                    inventory: crate::enrichment::Report::default(),
+                    telemetry: crate::telemetry::Telemetry::default(),
+                    trace: None,
                     historical_status: Status::Unknown,
                     status: Status::Unknown,
                     failures: 0,
@@ -410,6 +487,9 @@ impl Map {
             method: "SNMPv2c".into(),
             responding: true,
         });
+        if let Some(device) = self.devices.iter_mut().find(|device| device.id == source) {
+            device.telemetry.merge(snapshot.telemetry);
+        }
         if snapshot.complete {
             for link in &mut self.links {
                 if link.source == source && link.kind != LinkKind::Manual {
@@ -488,6 +568,46 @@ impl Map {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ping_summary_reports_loss_rtt_and_population_standard_deviation() {
+        let mut ping = PingStats::default();
+        for sample in [Some(1000), None, Some(3000), Some(5000)] {
+            ping.record(sample);
+        }
+        assert_eq!(
+            ping.summary(),
+            "Ping ICMP: ultime 4 sonde registrate\nRisposte: 3/4\nPerdita ping: 25.0%\nRTT min/medio/max: 1.00 ms / 3.00 ms / 5.00 ms\nVariabilita RTT (dev. std.): 1.63 ms"
+        );
+    }
+
+    #[test]
+    fn ping_window_discards_old_samples_and_handles_missing_or_single_reply() {
+        let mut ping = PingStats::default();
+        assert_eq!(ping.summary(), "Ping ICMP: nessuna misura");
+        ping.record(Some(1000));
+        assert!(
+            ping.summary()
+                .contains("Variabilita RTT: servono almeno 2 risposte")
+        );
+        for _ in 0..PING_SAMPLE_LIMIT {
+            ping.record(None);
+        }
+        assert_eq!(ping.samples.len(), PING_SAMPLE_LIMIT);
+        assert!(ping.summary().contains("Perdita ping: 100.0%"));
+        assert!(
+            ping.summary()
+                .contains("RTT e variabilita: non disponibili")
+        );
+        ping.record(Some(0));
+        ping.record(Some(0));
+        assert!(ping.summary().contains("Perdita ping: 98.0%"));
+        assert!(
+            ping.summary()
+                .contains("Variabilita RTT (dev. std.): 0.00 ms")
+        );
+    }
+
     fn observation(mac: &str) -> Observation {
         Observation {
             ip: Some(Ipv4Addr::LOCALHOST),

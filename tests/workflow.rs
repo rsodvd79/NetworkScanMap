@@ -1,5 +1,5 @@
 use network_scan_map::{
-    discovery::{self, JobMessage, ProbeResult, Target},
+    discovery::{self, JobMessage, ProbeReport, ProbeResult, Target},
     model::{Link, LinkKind, Map, Observation, Settings, Status, now},
     monitor, storage,
 };
@@ -41,7 +41,11 @@ fn loopback_discovery_save_reload_rescan_and_monitor_preserve_manual_data() {
             JobMessage::Host {
                 job,
                 target,
-                result: ProbeResult::Responding { method, .. },
+                result:
+                    ProbeReport {
+                        result: ProbeResult::Responding { method, .. },
+                        ..
+                    },
             } => {
                 assert_eq!(job, 7);
                 found = Some(map.merge(Observation {
@@ -103,7 +107,7 @@ fn loopback_discovery_save_reload_rescan_and_monitor_preserve_manual_data() {
         None,
         &std::sync::atomic::AtomicBool::new(false),
     );
-    monitor::apply(&mut map, id, result);
+    monitor::apply(&mut map, id, result.result);
     for _ in 0..3 {
         monitor::apply(&mut map, id, ProbeResult::Negative);
     }

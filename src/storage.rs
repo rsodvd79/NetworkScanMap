@@ -1,6 +1,6 @@
 use crate::{
     discovery,
-    model::{Map, Status},
+    model::{Map, PING_SAMPLE_LIMIT, Status},
 };
 use anyhow::{Context, Result, ensure};
 use std::{
@@ -23,9 +23,18 @@ pub fn validate(map: &Map) -> Result<()> {
     ensure!(map.events.len() <= 10_000, "Troppi eventi");
     let mut ids = HashSet::new();
     for device in &map.devices {
+        device.inventory.validate()?;
+        device.telemetry.validate()?;
+        if let Some(trace) = &device.trace {
+            trace.validate()?;
+        }
         ensure!(
             device.id > 0 && ids.insert(device.id),
             "ID apparato duplicato o nullo"
+        );
+        ensure!(
+            device.ping.samples.len() <= PING_SAMPLE_LIMIT,
+            "Troppe misure ping per apparato"
         );
         ensure!(
             device
@@ -131,8 +140,20 @@ mod tests {
         map.devices[0].notes = "Nota".into();
         map.devices[0].position = [123.0, 42.0];
         map.devices[0].last_latency_us = Some(1250);
+        map.devices[0].ping.record(Some(1000));
+        map.devices[0].ping.record(None);
+        map.devices[0].inventory = crate::enrichment::Report {
+            observed_at: 123,
+            dns_name: Some("host.example.test".into()),
+            ..Default::default()
+        };
         save(&path, &map).unwrap();
         let loaded = load(&path).unwrap();
+        assert_eq!(loaded.devices[0].ping.samples, map.devices[0].ping.samples);
+        assert_eq!(
+            loaded.devices[0].inventory.dns_name,
+            map.devices[0].inventory.dns_name
+        );
         assert_eq!(
             (
                 loaded.devices[0].notes.as_str(),
@@ -149,12 +170,31 @@ mod tests {
                 Some(1250)
             )
         );
-        let bytes = std::fs::read_to_string(path).unwrap();
+        let bytes = std::fs::read_to_string(&path).unwrap();
         assert!(
             !bytes.contains("community")
                 && !bytes.contains("\"failures\"")
                 && !bytes.contains("\"status\"")
         );
+        let mut legacy: serde_json::Value = serde_json::from_str(&bytes).unwrap();
+        legacy["devices"][0].as_object_mut().unwrap().remove("ping");
+        for field in ["inventory", "telemetry", "trace"] {
+            legacy["devices"][0].as_object_mut().unwrap().remove(field);
+        }
+        legacy["settings"]
+            .as_object_mut()
+            .unwrap()
+            .remove("enrich_scan");
+        std::fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+        assert!(load(&path).unwrap().devices[0].ping.samples.is_empty());
+        let old_map = load(&path).unwrap();
+        assert_eq!(old_map.devices[0].inventory.observed_at, 0);
+        assert!(!old_map.settings.enrich_scan);
+        legacy["devices"][0]["ping"] = serde_json::json!({
+            "samples": vec![None::<u64>; PING_SAMPLE_LIMIT + 1]
+        });
+        std::fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+        assert!(load(&path).is_err());
     }
     #[test]
     fn failed_validation_does_not_replace_previous_file() {

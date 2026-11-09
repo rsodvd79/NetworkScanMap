@@ -1,7 +1,19 @@
 use crate::{
     discovery::ProbeResult,
     model::{Map, Status, now},
+    platform::EchoResult,
 };
+
+pub fn apply_ping(map: &mut Map, id: u64, result: &EchoResult) {
+    let latency_us = match result {
+        EchoResult::Reply(latency) => Some(latency.as_micros().try_into().unwrap_or(u64::MAX)),
+        EchoResult::NoReply => None,
+        EchoResult::Unavailable(_) | EchoResult::LocalError(_) => return,
+    };
+    if let Some(device) = map.devices.iter_mut().find(|device| device.id == id) {
+        device.ping.record(latency_us);
+    }
+}
 
 pub fn apply(map: &mut Map, id: u64, result: ProbeResult) {
     let threshold = map.settings.failure_threshold;

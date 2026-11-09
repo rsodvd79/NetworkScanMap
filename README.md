@@ -8,8 +8,9 @@ dell'autorizzazione.
 ## Build e avvio
 
 Installare Rust stable, un compilatore/linker nativo e le librerie grafiche del
-sistema. Su Linux sono richieste le librerie di sviluppo X11/Wayland/EGL e
-xkbcommon (vedere `.github/workflows/ci.yml`). Le finestre file su Linux usano
+sistema. Su Linux sono richieste le librerie di sviluppo X11/Wayland/EGL,
+xkbcommon e OpenSSL (`libssl-dev`, con `pkg-config`; vedere
+`.github/workflows/ci.yml`). Le finestre file su Linux usano
 il portale desktop XDG; occorre un servizio `xdg-desktop-portal` funzionante.
 
 ```sh
@@ -48,8 +49,11 @@ cargo run --release --locked -- --demo
    La rimozione di un apparato richiede conferma; permette anche di risolvere
    identita obsolete dopo un riuso DHCP. IP condivisi/ambigui non vengono
    monitorati come se identificassero un unico apparato.
-   **Ridisponi** cambia esplicitamente il layout; le scansioni conservano le
-   coordinate esistenti.
+   Alla prima scansione di una mappa vuota, gli apparati collegati vengono
+   disposti attorno allo switch (o al gateway presunto), con spaziatura adattata
+   al numero di nodi. **Ridisponi** applica lo stesso layout alle mappe esistenti;
+   le scansioni successive conservano le coordinate personalizzate. Gli apparati
+   senza collegamenti attivi restano in una griglia per gruppo logico.
 5. **Salva / Apri** usano JSON versionato, con impostazioni, coordinate,
    osservazioni, collegamenti ed eventi. Le community restano solo in memoria
    e devono essere reinserite dopo il caricamento. La scrittura usa un file
@@ -61,6 +65,20 @@ cargo run --release --locked -- --demo
    I dettagli dell'apparato mostrano la latenza dell'ultima risposta ICMP, TCP
    o SNMP; durante il monitoraggio si aggiorna appena arriva una risposta.
    Un esito senza risposta valida rimuove la latenza corrente.
+   Il tempo compare anche nel rettangolo di ogni apparato: **Ping** per ICMP,
+   oppure il metodo TCP/SNMP effettivamente usato; senza misura e indicato
+   come non disponibile.
+   Dettagli e tooltip mostrano inoltre le statistiche delle **ultime 100 sonde
+   ICMP registrate**: risposte/tentativi, perdita percentuale, RTT
+   minimo/medio/massimo e variabilita come deviazione standard degli RTT
+   (servono almeno due risposte). Si usa il ping gia previsto a ogni scansione
+   o ciclo di monitoraggio, senza inviare sonde aggiuntive.
+   Un timeout ICMP conta come perdita anche se TCP/SNMP risponde; sonde
+   disabilitate, errori locali e ICMP non disponibile non contano come perdite.
+   Nei cicli annullati o con problemi locali si conservano le risposte valide,
+   ma si scartano i timeout ai fini delle statistiche.
+   Le misure vengono salvate nella mappa e riprese al caricamento; **Azzera
+   statistiche ping** nei dettagli avvia una nuova finestra di misure.
 
 Valori iniziali: 4096 indirizzi distinti, 32 worker, timeout 1000 ms, porte
 TCP 22/80/443, monitoraggio ogni 30 secondi, soglia di 3 cicli negativi.
@@ -68,11 +86,64 @@ Il timeout e per fase ICMP/TCP/SNMP; la durata totale del ciclo dipende da
 apparati, sonde e interrogazioni topologiche. Non si accodano cicli sovrapposti.
 Il registro mantiene gli ultimi 10000 eventi, con timestamp Unix in secondi.
 
+## Inventario e diagnostica di rete
+
+Selezionare un apparato e usare **Raccogli nomi, servizi e TLS** oppure
+**Traceroute (max 30 hop)** nei dettagli. La raccolta e asincrona e annullabile;
+non parte all'avvio o al caricamento della mappa. E consentita solo per IPv4
+univoci nel contesto selezionato e nelle subnet configurate, oppure aggiunti
+manualmente. Gli indirizzi pubblicizzati nelle risposte non diventano nuove
+destinazioni di scansione.
+
+L'opzione **Inventario DNS/mDNS, servizi e TLS durante la scansione**, inizialmente
+disabilitata, raccoglie gli stessi dati sui soli apparati rispondenti:
+
+- **DNS inverso e dominio**: query PTR ai resolver della configurazione di
+  sistema, senza fallback a resolver pubblici predefiniti. Il nome completo
+  contiene anche il dominio, quando pubblicato.
+- **mDNS**: query PTR unicast legacy alla porta 5353 dell'apparato autorizzato.
+  Non viene enumerata tutta la LAN; gli apparati che rispondono solo a multicast
+  potrebbero non fornire il nome.
+- **Servizi TCP**: vengono verificate tutte e sole le porte configurate
+  (massimo 16), distinguendo aperta, rifiutata, senza risposta ed errore.
+  L'associazione porta/servizio e indicata come indizio, non come identificazione
+  certa. Per SSH si legge il banner; per le comuni porte HTTP/HTTPS si richiedono
+  solo gli header con HEAD, senza seguire redirect o conservare cookie/body.
+- **TLS**: sulle porte TLS comuni configurate si leggono soggetto, emittente,
+  nomi SAN e date del certificato presentato, evidenziando la scadenza.
+  Anche certificati autofirmati o scaduti possono essere osservati: **identita
+  e catena non sono verificate**, e non vengono inviate credenziali.
+
+L'inventario usa un budget di circa 10 secondi per apparato e timeout limitati
+per fase. Nei dettagli sono disponibili pannelli per inventario, SNMP e percorso.
+I dati sono osservazioni datate e vengono salvati in JSON; i nomi personalizzati
+e le posizioni restano invariati. Le mappe precedenti restano caricabili: i nuovi
+campi mancanti vengono inizializzati senza dati, senza inventare misure.
+
+Con un profilo SNMPv2c di sola lettura sono disponibili, quando pubblicati
+dall'agente, **uptime, produttore/modello/firmware, stato e velocita delle
+interfacce, contatori di traffico/errori/scarti e VLAN**. Le associazioni
+MAC-porta-VLAN sono visibili anche se il MAC non identifica un nodo della mappa.
+Durante il monitoraggio vengono aggiornate le misure SNMP degli apparati
+rispondenti con profilo autorizzato. La banda richiede due campioni compatibili;
+riavvii, discontinuita o reset dei contatori non devono produrre picchi fittizi.
+Una MIB non supportata non significa che l'apparato non abbia quella funzione.
+
+Il traceroute invia una sonda IPv4 per TTL, fino a 30 hop, con timeout per hop
+limitato a un secondo. Mostra router intermedi, tempi e timeout; non interroga
+ulteriormente gli IP dei router. ACL, NAT o limitazioni ICMP possono lasciare
+hop sconosciuti o impedire la raccolta. Non viene richiesta elevazione e non
+vengono eseguiti programmi esterni; l'indisponibilita delle API/socket necessari
+viene segnalata.
+
 ## Interpretazione corretta
 
 - **Blu continuo**: adiacenza pubblicata in LLDP-MIB, con porte e fonte.
 - **Giallo tratteggiato**: relazione dedotta da FDB o route; non prova un
   collegamento fisico diretto. I raggruppamenti subnet sono esclusivamente logici.
+  Nella LAN, in assenza di altre evidenze attive, il gateway dell'interfaccia
+  viene usato come switch presunto. Se manca dalla mappa viene aggiunto solo
+  nelle subnet autorizzate, con raggiungibilita sconosciuta fino a una risposta.
 - **Viola**: collegamento manuale. Le scansioni non lo rimuovono.
 - **Grigio / storico**: evidenza precedente non aggiornata.
 - Stato **raggiungibile**, **in verifica**, **non raggiungibile**, **sconosciuto**
@@ -140,7 +211,8 @@ Il piano originale e in `PLAN.md`.
 ### Stato delle verifiche locali
 
 Su macOS: test automatici (loopback ICMP/TCP, agente SNMP simulato, persistenza,
-merge, monitoraggio e canvas), formatter, Clippy e build release superati.
+merge, monitoraggio, inventario HTTP/TLS con certificato autofirmato di test,
+parser DNS/mDNS e traceroute e canvas), formatter, Clippy e build release superati.
 Avvio/chiusura GUI reale verificati con `--smoke-test --demo` (500 nodi).
 Interfacce e route lette tramite API native, senza sonde LAN.
 I binding Windows e fixture dei parser Linux sono stati controllati, ma

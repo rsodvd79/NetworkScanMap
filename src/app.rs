@@ -1,10 +1,10 @@
 use crate::{
     diagram::Diagram,
-    discovery::{self, Job, JobMessage, ProbeResult, Target},
+    discovery::{self, Job, JobMessage, ProbeReport, ProbeResult, Target},
     mac,
     model::{Link, LinkKind, Map, Observation, Status, latency_label, now},
     monitor,
-    platform::{self, NetworkInfo},
+    platform::{self, EchoResult, NetworkInfo},
     storage,
     topology::Profile,
 };
@@ -18,6 +18,10 @@ use std::{
     },
     time::{Duration, Instant},
 };
+
+const GATEWAY_HINT: &str = "Route locale via gateway; relazione logica, non cavo diretto";
+const LAN_GATEWAY_HINT: &str =
+    "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto";
 
 enum FileMessage {
     Info(NetworkInfo),
@@ -35,10 +39,12 @@ enum Pending {
 struct Active {
     job: Job,
     scan: bool,
+    inspection: bool,
+    arrange: bool,
     valid: bool,
     total: usize,
     processed: usize,
-    results: Vec<(u64, ProbeResult)>,
+    results: Vec<(u64, ProbeReport)>,
 }
 
 pub struct NetworkApp {
@@ -371,6 +377,8 @@ impl NetworkApp {
         self.active = Some(Active {
             job,
             scan,
+            inspection: false,
+            arrange: scan && self.map.devices.is_empty(),
             valid: true,
             total,
             processed: 0,
@@ -390,6 +398,68 @@ impl NetworkApp {
                 .event("Scansione avviata; le informazioni precedenti saranno conservate");
             self.changed();
         }
+        Ok(())
+    }
+
+    fn inspection_target(&self, id: u64) -> anyhow::Result<Target> {
+        let device = self
+            .map
+            .devices
+            .iter()
+            .find(|device| device.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Apparato non presente"))?;
+        anyhow::ensure!(
+            device.context == self.map.settings.context,
+            "Selezionare il contesto dell'apparato"
+        );
+        let ip = device
+            .ip
+            .ok_or_else(|| anyhow::anyhow!("Apparato senza IPv4"))?;
+        anyhow::ensure!(
+            ip.octets()[0] > 0 && ip.octets()[0] < 224,
+            "Destinazione non unicast"
+        );
+        anyhow::ensure!(
+            self.map
+                .devices
+                .iter()
+                .filter(|other| other.context == device.context && other.ip == Some(ip))
+                .count()
+                == 1,
+            "IP condiviso / identita ambigua"
+        );
+        let networks = discovery::networks(&self.map.settings.networks)?;
+        anyhow::ensure!(
+            device.manual || networks.iter().any(|network| network.contains(&ip)),
+            "Apparato fuori dalle subnet autorizzate; aggiungerlo esplicitamente come manuale per interrogarlo"
+        );
+        Ok(Target { id, ip })
+    }
+
+    fn launch_inspection(&mut self, id: u64, kind: discovery::Inspection) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.active.is_none(),
+            "Un'altra operazione di rete e in corso"
+        );
+        let target = self.inspection_target(id)?;
+        let job = discovery::inspect(
+            self.next_job,
+            target,
+            self.map.settings.clone(),
+            kind,
+            self.sender.clone(),
+        )?;
+        self.next_job += 1;
+        self.active = Some(Active {
+            job,
+            scan: false,
+            inspection: true,
+            arrange: false,
+            valid: true,
+            total: 1,
+            processed: 0,
+            results: vec![],
+        });
         Ok(())
     }
 
@@ -442,6 +512,9 @@ impl NetworkApp {
             let job_id = match &message {
                 JobMessage::Host { job, .. }
                 | JobMessage::Topology { job, .. }
+                | JobMessage::Inventory { job, .. }
+                | JobMessage::Trace { job, .. }
+                | JobMessage::Telemetry { job, .. }
                 | JobMessage::NetworkInfo { job, .. }
                 | JobMessage::Warning { job, .. }
                 | JobMessage::Finished { job, .. } => *job,
@@ -453,16 +526,19 @@ impl NetworkApp {
             let valid = active.valid;
             let scan = active.scan;
             match message {
-                JobMessage::Host { target, result, .. } if valid => {
+                JobMessage::Host {
+                    target,
+                    result: report,
+                    ..
+                } if valid => {
                     if let Some(a) = &mut self.active {
                         a.processed += 1;
-                        if !scan {
-                            a.results.push((target.id, result.clone()));
-                        }
                     }
-                    if scan && let ProbeResult::Responding { ref method, .. } = result {
+                    let id = if scan
+                        && let ProbeResult::Responding { ref method, .. } = report.result
+                    {
                         let mac = neighbor_mac(&self.info, target.ip, &self.map.settings.interface);
-                        let id = self.map.merge(Observation {
+                        Some(self.map.merge(Observation {
                             ip: Some(target.ip),
                             context: self.map.settings.context.clone(),
                             group: discovery::group_for(target.ip, &self.map.settings.networks),
@@ -472,23 +548,50 @@ impl NetworkApp {
                             description: String::new(),
                             method: method.clone(),
                             responding: true,
-                        });
-                        monitor::apply(&mut self.map, id, result.clone());
-                        if let Some(active) = &mut self.active {
-                            active.results.push((id, result));
+                        }))
+                    } else if scan {
+                        let mut matches = self
+                            .map
+                            .devices
+                            .iter()
+                            .filter(|device| {
+                                device.context == self.map.settings.context
+                                    && device.ip == Some(target.ip)
+                            })
+                            .map(|device| device.id);
+                        let first = matches.next();
+                        if matches.next().is_none() {
+                            first
+                        } else {
+                            None
                         }
-                        self.changed();
-                    } else if !scan && let ProbeResult::Responding { .. } = result {
-                        monitor::apply(&mut self.map, target.id, result.clone());
-                        self.changed();
+                    } else {
+                        Some(target.id)
+                    };
+                    if let Some(id) = id {
+                        if matches!(report.result, ProbeResult::Responding { .. }) {
+                            monitor::apply(&mut self.map, id, report.result.clone());
+                            if let Some(icmp @ EchoResult::Reply(_)) = &report.icmp {
+                                monitor::apply_ping(&mut self.map, id, icmp);
+                            }
+                            self.changed();
+                        }
+                        if let Some(active) = &mut self.active {
+                            active.results.push((id, report));
+                        }
                     }
                 }
                 JobMessage::NetworkInfo { info, .. } if valid => {
                     self.info = *info;
-                    let seen: Vec<_> = self
-                        .active
-                        .as_ref()
-                        .map_or_else(Vec::new, |a| a.results.iter().map(|(id, _)| *id).collect());
+                    let seen: Vec<_> = self.active.as_ref().map_or_else(Vec::new, |a| {
+                        a.results
+                            .iter()
+                            .filter(|(_, report)| {
+                                matches!(report.result, ProbeResult::Responding { .. })
+                            })
+                            .map(|(id, _)| *id)
+                            .collect()
+                    });
                     let observations: Vec<_> = self
                         .map
                         .devices
@@ -526,6 +629,54 @@ impl NetworkApp {
                     self.map.apply_topology(*snapshot, &context, &group);
                     self.changed();
                 }
+                JobMessage::Inventory { target, report, .. } if valid => {
+                    let ids: Vec<_> = self
+                        .map
+                        .devices
+                        .iter()
+                        .filter(|device| {
+                            device.context == self.map.settings.context
+                                && device.ip == Some(target.ip)
+                                && (target.id == 0 || target.id == device.id)
+                        })
+                        .map(|device| device.id)
+                        .collect();
+                    if let [id] = ids.as_slice()
+                        && let Some(device) =
+                            self.map.devices.iter_mut().find(|device| device.id == *id)
+                    {
+                        device.inventory = *report;
+                        if let Some(active) = &mut self.active
+                            && active.inspection
+                        {
+                            active.processed = 1;
+                        }
+                        self.changed();
+                    }
+                }
+                JobMessage::Telemetry { target, report, .. } if valid => {
+                    if let Some(device) = self.map.devices.iter_mut().find(|device| {
+                        device.id == target.id
+                            && device.ip == Some(target.ip)
+                            && device.context == self.map.settings.context
+                    }) {
+                        device.telemetry.merge(*report);
+                        self.changed();
+                    }
+                }
+                JobMessage::Trace { target, report, .. } if valid => {
+                    if let Some(device) = self.map.devices.iter_mut().find(|device| {
+                        device.id == target.id
+                            && device.ip == Some(target.ip)
+                            && device.context == self.map.settings.context
+                    }) {
+                        device.trace = Some(*report);
+                        if let Some(active) = &mut self.active {
+                            active.processed = 1;
+                        }
+                        self.changed();
+                    }
+                }
                 JobMessage::Warning { text, .. } if valid => {
                     self.map.event(text);
                     self.changed();
@@ -539,8 +690,17 @@ impl NetworkApp {
                         // Finished is sent after all host events; joining here cannot await network work.
                         let _ = active.job.handle.join();
                         if valid {
-                            if !scan && !cancelled {
-                                for (id, result) in active.results {
+                            if !cancelled {
+                                for (id, report) in active.results {
+                                    if !local_problem
+                                        && let Some(icmp @ EchoResult::NoReply) = &report.icmp
+                                    {
+                                        monitor::apply_ping(&mut self.map, id, icmp);
+                                    }
+                                    if scan {
+                                        continue;
+                                    }
+                                    let result = report.result;
                                     let result = if local_problem
                                         && !matches!(result, ProbeResult::Responding { .. })
                                     {
@@ -562,7 +722,11 @@ impl NetworkApp {
                                     "Scansione terminata; apparati non ritrovati conservati"
                                 });
                                 self.add_gateway_hints();
-                                self.diagram.fit();
+                                if active.arrange {
+                                    self.diagram.rearrange(&mut self.map);
+                                } else {
+                                    self.diagram.fit();
+                                }
                             }
                             if local_problem {
                                 self.map.event("Copertura parziale: verificare sonde disponibili, rete locale e permessi");
@@ -579,12 +743,37 @@ impl NetworkApp {
     }
 
     fn add_gateway_hints(&mut self) {
+        let context = self.map.settings.context.clone();
+        let current_ids: std::collections::HashSet<_> = self
+            .map
+            .devices
+            .iter()
+            .filter(|d| d.context == context)
+            .map(|d| d.id)
+            .collect();
+        self.map.links.retain(|link| {
+            !(current_ids.contains(&link.source)
+                && link.kind == LinkKind::Inferred
+                && matches!(link.evidence.as_str(), GATEWAY_HINT | LAN_GATEWAY_HINT))
+        });
+        let targets: Vec<_> = self
+            .map
+            .devices
+            .iter()
+            .filter(|d| d.context == context)
+            .filter_map(|d| d.ip.map(|ip| (d.id, ip)))
+            .collect();
+        let networks = discovery::networks(&self.map.settings.networks).unwrap_or_default();
         let mut links = vec![];
-        for device in &self.map.devices {
-            if device.context != self.map.settings.context {
+        for (id, ip) in targets {
+            if self
+                .map
+                .links
+                .iter()
+                .any(|link| !link.stale && (link.from == id || link.to == id))
+            {
                 continue;
             }
-            let Some(ip) = device.ip else { continue };
             let route = self
                 .info
                 .routes
@@ -595,23 +784,70 @@ impl NetworkApp {
                             || r.interface == self.map.settings.interface)
                 })
                 .max_by_key(|r| r.network.prefix_len());
-            if let Some(gateway) = route.and_then(|r| r.gateway)
-                && let Some(gw) = self.map.devices.iter().find(|d| {
-                    d.ip == Some(gateway) && d.context == device.context && d.id != device.id
+            let Some(route) = route else { continue };
+            let local_network = self
+                .info
+                .interfaces
+                .iter()
+                .filter_map(|interface| {
+                    (interface.name == route.interface)
+                        .then(|| ipnet::Ipv4Net::new(interface.address, interface.prefix).ok())
+                        .flatten()
                 })
-            {
-                links.push(Link {
-                    from: gw.id,
-                    to: device.id,
-                    from_port: String::new(),
-                    to_port: String::new(),
-                    kind: LinkKind::Inferred,
-                    evidence: "Route locale via gateway; relazione logica, non cavo diretto".into(),
-                    source: gw.id,
-                    last_seen: now(),
-                    stale: false,
-                });
-            }
+                .find(|network| network.contains(&ip));
+            let gateway = route.gateway.or_else(|| {
+                self.info
+                    .routes
+                    .iter()
+                    .filter(|r| r.interface == route.interface && r.network.prefix_len() == 0)
+                    .filter_map(|r| r.gateway)
+                    .find(|gateway| local_network.is_some_and(|net| net.contains(gateway)))
+            });
+            let Some(gateway) = gateway.filter(|gateway| *gateway != ip) else {
+                continue;
+            };
+            let local = local_network.is_some_and(|network| network.contains(&gateway));
+            let gateways: Vec<_> = self
+                .map
+                .devices
+                .iter()
+                .filter(|d| d.ip == Some(gateway) && d.context == context)
+                .map(|d| d.id)
+                .collect();
+            let gateway_id = match gateways.as_slice() {
+                [id] => *id,
+                [] if local && networks.iter().any(|net| net.contains(&gateway)) => {
+                    self.map.merge(Observation {
+                        ip: Some(gateway),
+                        context: context.clone(),
+                        group: discovery::group_for(gateway, &self.map.settings.networks),
+                        mac: neighbor_mac(&self.info, gateway, &route.interface),
+                        chassis: None,
+                        name: "Gateway".into(),
+                        description: "Gateway da route locale; raggiungibilita non verificata"
+                            .into(),
+                        method: String::new(),
+                        responding: false,
+                    })
+                }
+                _ => continue,
+            };
+            links.push(Link {
+                from: gateway_id,
+                to: id,
+                from_port: String::new(),
+                to_port: String::new(),
+                kind: LinkKind::Inferred,
+                evidence: if local {
+                    LAN_GATEWAY_HINT
+                } else {
+                    GATEWAY_HINT
+                }
+                .into(),
+                source: gateway_id,
+                last_seen: now(),
+                stale: false,
+            });
         }
         for link in links {
             self.map.add_link(link);
@@ -675,6 +911,8 @@ impl NetworkApp {
             let mut changed = ui
                 .checkbox(&mut settings.icmp, "ICMP (fallback TCP se non disponibile)")
                 .changed();
+            changed |= ui.checkbox(&mut settings.enrich_scan, "Inventario DNS/mDNS, servizi e TLS durante la scansione").changed();
+            ui.small("Sonde aggiuntive, solo sui dispositivi rispondenti e sulle porte configurate. Nessun accesso autenticato.");
             ui.label("Porte TCP (max 16)");
             if ui.text_edit_singleline(&mut self.ports_text).changed() {
                 match self
@@ -755,7 +993,9 @@ impl NetworkApp {
                         "{}/{} — {}",
                         active.processed,
                         active.total,
-                        if active.scan {
+                        if active.inspection {
+                            "Inventario / percorso"
+                        } else if active.scan {
                             "Scansione / SNMP"
                         } else {
                             "Monitoraggio"
@@ -863,6 +1103,27 @@ impl NetworkApp {
                     .last_latency_us
                     .map_or_else(|| "non disponibile".into(), latency_label)
             ));
+            ui.label(device.ping.summary());
+            let mut changed = false;
+            if !device.ping.samples.is_empty()
+                && ui.small_button("Azzera statistiche ping").clicked()
+            {
+                device.ping.samples.clear();
+                changed = true;
+            }
+            egui::CollapsingHeader::new("Nomi, servizi e certificati TLS").show(ui, |ui| {
+                ui.label(device.inventory.summary());
+            });
+            egui::CollapsingHeader::new("SNMP: apparato, porte, traffico e VLAN").show(ui, |ui| {
+                ui.label(device.telemetry.summary());
+            });
+            egui::CollapsingHeader::new("Percorso verso l'apparato").show(ui, |ui| {
+                if let Some(trace) = &device.trace {
+                    ui.label(trace.summary());
+                } else {
+                    ui.label("Percorso non ancora raccolto");
+                }
+            });
             ui.label(format!(
                 "Chassis: {}",
                 device.chassis.as_deref().unwrap_or("Non disponibile")
@@ -872,12 +1133,30 @@ impl NetworkApp {
             ui.label(format!("Sonda: {}", device.last_method));
             ui.label(&device.description);
             ui.label("Nome personalizzato");
-            let mut changed = ui.text_edit_singleline(&mut device.custom_name).changed();
+            changed |= ui.text_edit_singleline(&mut device.custom_name).changed();
             ui.label("Note");
             changed |= ui.text_edit_multiline(&mut device.notes).changed();
             if changed {
                 self.changed();
             }
+        }
+        let authorized = self.inspection_target(id).is_ok();
+        let mut inspection = None;
+        ui.add_enabled_ui(authorized && self.active.is_none(), |ui| {
+            if ui.button("Raccogli nomi, servizi e TLS").clicked() {
+                inspection = Some(discovery::Inspection::Inventory);
+            }
+            if ui.button("Traceroute (max 30 hop)").clicked() {
+                inspection = Some(discovery::Inspection::Trace);
+            }
+        });
+        if !authorized {
+            ui.small("Raccolta disponibile solo per IPv4 univoci nel contesto e nelle subnet autorizzate, o aggiunti manualmente.");
+        }
+        if let Some(kind) = inspection
+            && let Err(error) = self.launch_inspection(id, kind)
+        {
+            self.error = error.to_string();
         }
         ui.separator();
         ui.label("Collegamenti (porta, evidenza, data)");
@@ -1112,6 +1391,9 @@ impl eframe::App for NetworkApp {
             });
         egui::CentralPanel::default().show(ui, |ui| {
             if self.diagram.show(ui, &mut self.map) {
+                if let Some(active) = &mut self.active {
+                    active.arrange = false;
+                }
                 self.changed();
             }
         });
@@ -1320,6 +1602,8 @@ mod tests {
                 handle: std::thread::spawn(|| {}),
             },
             scan,
+            inspection: false,
+            arrange: false,
             valid: true,
             total: 1,
             processed: 0,
@@ -1338,9 +1622,12 @@ mod tests {
                     id: 0,
                     ip: Ipv4Addr::LOCALHOST,
                 },
-                result: ProbeResult::Responding {
-                    method: "TCP".into(),
-                    latency: Duration::from_millis(1),
+                result: ProbeReport {
+                    result: ProbeResult::Responding {
+                        method: "TCP".into(),
+                        latency: Duration::from_millis(1),
+                    },
+                    icmp: None,
                 },
             })
             .unwrap();
@@ -1364,7 +1651,13 @@ mod tests {
             responding: true,
         });
         let mut active = active(1, false);
-        active.results.push((id, ProbeResult::Negative));
+        active.results.push((
+            id,
+            ProbeReport {
+                result: ProbeResult::Negative,
+                icmp: Some(EchoResult::NoReply),
+            },
+        ));
         app.active = Some(active);
         app.sender
             .send(JobMessage::Finished {
@@ -1378,6 +1671,7 @@ mod tests {
             (app.map.devices[0].status, app.map.devices[0].failures),
             (Status::Up, 0)
         );
+        assert!(app.map.devices[0].ping.samples.is_empty());
     }
 
     #[test]
@@ -1402,9 +1696,12 @@ mod tests {
                     id,
                     ip: Ipv4Addr::LOCALHOST,
                 },
-                result: ProbeResult::Responding {
-                    method: "ICMP".into(),
-                    latency: Duration::from_micros(420),
+                result: ProbeReport {
+                    result: ProbeResult::Responding {
+                        method: "ICMP".into(),
+                        latency: Duration::from_micros(420),
+                    },
+                    icmp: Some(EchoResult::Reply(Duration::from_micros(420))),
                 },
             })
             .unwrap();
@@ -1417,7 +1714,16 @@ mod tests {
             ),
             (Status::Up, Some(420))
         );
-        app.active = None;
+        assert_eq!(app.map.devices[0].ping.samples, [Some(420)]);
+        app.sender
+            .send(JobMessage::Finished {
+                job: 1,
+                cancelled: false,
+                local_problem: false,
+            })
+            .unwrap();
+        app.poll(&egui::Context::default());
+        assert_eq!(app.map.devices[0].ping.samples, [Some(420)]);
     }
 
     #[test]
@@ -1437,5 +1743,385 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(neighbor_mac(&info, ip, ""), None);
+    }
+
+    fn lan_app() -> (NetworkApp, u64) {
+        let mut app = NetworkApp::new(false, false);
+        app.info = local_info();
+        app.info.routes.push(platform::Route {
+            network: "192.168.1.0/24".parse().unwrap(),
+            gateway: None,
+            interface: "en0".into(),
+        });
+        app.map.settings.networks = "192.168.1.0/24".into();
+        let host = app.map.merge(Observation {
+            ip: Some(Ipv4Addr::new(192, 168, 1, 42)),
+            context: app.map.settings.context.clone(),
+            group: "192.168.1.0/24".into(),
+            mac: None,
+            chassis: None,
+            name: "Host".into(),
+            description: String::new(),
+            method: String::new(),
+            responding: false,
+        });
+        (app, host)
+    }
+
+    #[test]
+    fn local_hosts_use_the_gateway_as_an_inferred_switch_without_claiming_it_is_up() {
+        let (mut app, host) = lan_app();
+        app.add_gateway_hints();
+        app.add_gateway_hints();
+        let gateway = app.map.devices.iter().find(|d| d.id != host).unwrap();
+        assert_eq!(gateway.ip, Some(Ipv4Addr::new(192, 168, 1, 1)));
+        assert_eq!(gateway.status, Status::Unknown);
+        assert_eq!(gateway.last_seen, None);
+        assert_eq!(app.map.links.len(), 1);
+        let link = &app.map.links[0];
+        assert_eq!((link.from, link.to), (host, gateway.id));
+        assert_eq!(link.kind, LinkKind::Inferred);
+        assert_eq!(link.evidence, LAN_GATEWAY_HINT);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("lan.json");
+        storage::save(&path, &app.map).unwrap();
+        assert_eq!(
+            storage::load(&path).unwrap().links[0].evidence,
+            LAN_GATEWAY_HINT
+        );
+    }
+
+    #[test]
+    fn gateway_fallback_yields_to_other_evidence_and_returns_when_it_is_stale() {
+        for kind in [LinkKind::Observed, LinkKind::Inferred, LinkKind::Manual] {
+            let (mut app, host) = lan_app();
+            app.add_gateway_hints();
+            let gateway = app.map.links[0].source;
+            app.map.add_link(Link {
+                from: host,
+                to: gateway,
+                from_port: "1".into(),
+                to_port: "2".into(),
+                kind,
+                evidence: "Altra evidenza".into(),
+                source: gateway,
+                last_seen: now(),
+                stale: false,
+            });
+            app.add_gateway_hints();
+            assert_eq!(app.map.links.len(), 1);
+            assert_eq!(app.map.links[0].evidence, "Altra evidenza");
+            app.map.links[0].stale = true;
+            app.add_gateway_hints();
+            assert_eq!(app.map.links.len(), 2);
+            assert_eq!(app.map.links[1].evidence, LAN_GATEWAY_HINT);
+        }
+    }
+
+    #[test]
+    fn lan_gateway_fallback_respects_interface_context_and_scan_scope() {
+        for case in ["interface", "context", "scope"] {
+            let (mut app, _) = lan_app();
+            match case {
+                "interface" => app.map.settings.interface = "other".into(),
+                "context" => app.map.settings.context = "Altra rete".into(),
+                _ => app.map.settings.networks = "192.168.1.42/32".into(),
+            }
+            app.add_gateway_hints();
+            assert!(app.map.links.is_empty(), "{case}");
+            assert_eq!(app.map.devices.len(), 1, "{case}");
+        }
+    }
+
+    #[test]
+    fn first_scan_arranges_around_gateway_but_rescan_preserves_coordinates() {
+        for arrange in [true, false] {
+            let (mut app, _) = lan_app();
+            app.map.devices[0].position = [123.0, 456.0];
+            let mut job = active(1, true);
+            job.arrange = arrange;
+            app.active = Some(job);
+            app.sender
+                .send(JobMessage::Finished {
+                    job: 1,
+                    cancelled: false,
+                    local_problem: false,
+                })
+                .unwrap();
+            app.poll(&egui::Context::default());
+            assert_eq!(
+                app.map.devices[0].position,
+                if arrange {
+                    [360.0, 180.0]
+                } else {
+                    [123.0, 456.0]
+                },
+            );
+        }
+    }
+
+    #[test]
+    fn icmp_loss_is_counted_even_with_tcp_fallback_but_not_for_invalid_cycles() {
+        for scan in [true, false] {
+            for (cancelled, local_problem) in [(false, false), (true, false), (false, true)] {
+                let (mut app, id) = lan_app();
+                app.active = Some(active(1, scan));
+                app.sender
+                    .send(JobMessage::Host {
+                        job: 1,
+                        target: Target {
+                            id,
+                            ip: Ipv4Addr::new(192, 168, 1, 42),
+                        },
+                        result: ProbeReport {
+                            result: ProbeResult::Responding {
+                                method: "TCP 443".into(),
+                                latency: Duration::from_micros(500),
+                            },
+                            icmp: Some(EchoResult::NoReply),
+                        },
+                    })
+                    .unwrap();
+                app.poll(&egui::Context::default());
+                assert!(app.map.devices[0].ping.samples.is_empty());
+                assert_eq!(app.map.devices[0].last_latency_us, Some(500));
+                app.sender
+                    .send(JobMessage::Finished {
+                        job: 1,
+                        cancelled,
+                        local_problem,
+                    })
+                    .unwrap();
+                app.poll(&egui::Context::default());
+                if cancelled || local_problem {
+                    assert!(app.map.devices[0].ping.samples.is_empty());
+                } else {
+                    assert_eq!(app.map.devices[0].ping.samples, [None]);
+                    assert!(
+                        app.map.devices[0]
+                            .ping
+                            .summary()
+                            .contains("Perdita ping: 100.0%")
+                    );
+                }
+                assert_eq!(app.map.devices[0].status, Status::Up);
+            }
+        }
+    }
+
+    #[test]
+    fn missing_ping_replies_update_known_hosts_without_inventing_hosts_or_counting_local_errors() {
+        for scan in [true, false] {
+            for icmp in [
+                Some(EchoResult::NoReply),
+                Some(EchoResult::Unavailable("Non disponibile".into())),
+                Some(EchoResult::LocalError("Errore locale".into())),
+                None,
+            ] {
+                let expected = usize::from(matches!(icmp, Some(EchoResult::NoReply)));
+                let (mut app, id) = lan_app();
+                app.active = Some(active(1, scan));
+                app.sender
+                    .send(JobMessage::Host {
+                        job: 1,
+                        target: Target {
+                            id,
+                            ip: Ipv4Addr::new(192, 168, 1, 42),
+                        },
+                        result: ProbeReport {
+                            result: ProbeResult::Negative,
+                            icmp,
+                        },
+                    })
+                    .unwrap();
+                app.sender
+                    .send(JobMessage::Finished {
+                        job: 1,
+                        cancelled: false,
+                        local_problem: false,
+                    })
+                    .unwrap();
+                app.poll(&egui::Context::default());
+                assert_eq!(app.map.devices[0].ping.samples.len(), expected);
+            }
+        }
+        let mut app = NetworkApp::new(false, false);
+        app.active = Some(active(1, true));
+        app.sender
+            .send(JobMessage::Host {
+                job: 1,
+                target: Target {
+                    id: 0,
+                    ip: Ipv4Addr::new(192, 0, 2, 1),
+                },
+                result: ProbeReport {
+                    result: ProbeResult::Negative,
+                    icmp: Some(EchoResult::NoReply),
+                },
+            })
+            .unwrap();
+        app.poll(&egui::Context::default());
+        assert!(app.map.devices.is_empty());
+    }
+
+    #[test]
+    fn device_details_render_ping_statistics_and_reset_control() {
+        let (mut app, id) = lan_app();
+        app.diagram.selected = Some(id);
+        for sample in [Some(1000), None, Some(3000)] {
+            app.map.devices[0].ping.record(sample);
+        }
+        let mut output = egui::Context::default().run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::Vec2::new(800.0, 1200.0),
+                )),
+                ..Default::default()
+            },
+            |ui| app.details(ui),
+        );
+        for expected in [
+            "Perdita ping: 33.3%",
+            "RTT min/medio/max",
+            "Variabilita RTT (dev. std.): 1.00 ms",
+            "Azzera statistiche ping",
+        ] {
+            assert!(output.shapes.iter().any(|shape| matches!(
+                &shape.shape, egui::epaint::Shape::Text(text) if text.galley.job.text.contains(expected)
+            )), "{expected}");
+        }
+        output.textures_delta.clear();
+    }
+
+    #[test]
+    fn additional_queries_require_authorized_unambiguous_ips_in_the_current_context() {
+        let (mut app, id) = lan_app();
+        assert_eq!(app.inspection_target(id).unwrap().id, id);
+        app.map.settings.networks = "192.0.2.0/24".into();
+        assert!(app.inspection_target(id).is_err());
+        app.map.devices[0].manual = true;
+        assert!(app.inspection_target(id).is_ok());
+        app.map.settings.context = "Altra rete".into();
+        assert!(app.inspection_target(id).is_err());
+        app.map.settings.context = app.map.devices[0].context.clone();
+        let mut duplicate = app.map.devices[0].clone();
+        duplicate.id = app.map.next_id;
+        app.map.next_id += 1;
+        app.map.devices.push(duplicate);
+        assert!(app.inspection_target(id).is_err());
+        assert!(
+            app.launch_inspection(id, discovery::Inspection::Trace)
+                .is_err()
+        );
+        assert!(app.active.is_none());
+    }
+
+    #[test]
+    fn inventory_results_preserve_manual_metadata_and_do_not_claim_live_reachability() {
+        let (mut app, id) = lan_app();
+        app.map.devices[0].name.clear();
+        app.map.devices[0].custom_name = "Nome manuale".into();
+        app.map.devices[0].position = [42.0, 123.0];
+        let mut job = active(1, false);
+        job.inspection = true;
+        app.active = Some(job);
+        for job in [2, 1] {
+            app.sender
+                .send(JobMessage::Inventory {
+                    job,
+                    target: Target {
+                        id,
+                        ip: Ipv4Addr::new(192, 168, 1, 42),
+                    },
+                    report: Box::new(crate::enrichment::Report {
+                        observed_at: 123,
+                        dns_name: Some("host.example.test".into()),
+                        ..Default::default()
+                    }),
+                })
+                .unwrap();
+            app.poll(&egui::Context::default());
+            assert_eq!(
+                app.map.devices[0].inventory.observed_at,
+                if job == 1 { 123 } else { 0 }
+            );
+        }
+        assert!(app.map.devices[0].name.is_empty());
+        assert_eq!(app.map.devices[0].label(), "Nome manuale");
+        app.map.devices[0].custom_name.clear();
+        assert_eq!(app.map.devices[0].label(), "host.example.test");
+        assert_eq!(app.map.devices[0].position, [42.0, 123.0]);
+        assert_eq!(app.map.devices[0].status, Status::Unknown);
+        assert!(app.map.devices[0].ping.samples.is_empty());
+        assert_eq!(app.active.as_ref().unwrap().processed, 1);
+    }
+
+    #[test]
+    fn telemetry_refresh_does_not_replace_probe_latency_or_change_topology() {
+        let (mut app, id) = lan_app();
+        app.add_gateway_hints();
+        app.map.devices[0].last_method = "ICMP".into();
+        app.map.devices[0].last_latency_us = Some(420);
+        let links = serde_json::to_string(&app.map.links).unwrap();
+        app.active = Some(active(1, false));
+        app.sender
+            .send(JobMessage::Telemetry {
+                job: 1,
+                target: Target {
+                    id,
+                    ip: Ipv4Addr::new(192, 168, 1, 42),
+                },
+                report: Box::default(),
+            })
+            .unwrap();
+        app.poll(&egui::Context::default());
+        assert_eq!(app.map.devices[0].last_method, "ICMP");
+        assert_eq!(app.map.devices[0].last_latency_us, Some(420));
+        assert_eq!(serde_json::to_string(&app.map.links).unwrap(), links);
+    }
+
+    #[test]
+    fn explicit_loopback_traceroute_finishes_in_background_and_survives_map_reload() {
+        let mut app = NetworkApp::new(false, false);
+        app.map.settings.networks = "127.0.0.1/32".into();
+        app.map.settings.timeout_ms = 50;
+        let id = app.map.merge(Observation {
+            ip: Some(Ipv4Addr::LOCALHOST),
+            context: app.map.settings.context.clone(),
+            group: "127.0.0.1/32".into(),
+            mac: None,
+            chassis: None,
+            name: String::new(),
+            description: String::new(),
+            method: String::new(),
+            responding: false,
+        });
+        app.launch_inspection(id, discovery::Inspection::Trace)
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while app.active.is_some() {
+            app.poll(&egui::Context::default());
+            assert!(
+                Instant::now() < deadline,
+                "La raccolta non termina nel budget previsto"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        let report = app.map.devices[0].trace.as_ref().unwrap();
+        report.validate().unwrap();
+        assert_eq!(report.destination, Ipv4Addr::LOCALHOST);
+        assert_eq!(app.map.devices[0].status, Status::Unknown);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trace.json");
+        storage::save(&path, &app.map).unwrap();
+        assert_eq!(
+            storage::load(&path).unwrap().devices[0]
+                .trace
+                .as_ref()
+                .unwrap()
+                .destination,
+            Ipv4Addr::LOCALHOST
+        );
     }
 }
