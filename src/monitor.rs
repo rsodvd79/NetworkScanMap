@@ -10,14 +10,16 @@ pub fn apply(map: &mut Map, id: u64, result: ProbeResult) {
     };
     let previous = device.status;
     match result {
-        ProbeResult::Responding(method) => {
+        ProbeResult::Responding { method, latency } => {
             device.status = Status::Up;
             device.failures = 0;
             device.last_seen = Some(now());
             device.last_method = method;
+            device.last_latency_us = Some(latency.as_micros().try_into().unwrap_or(u64::MAX));
         }
         ProbeResult::Negative => {
             device.failures = device.failures.saturating_add(1);
+            device.last_latency_us = None;
             device.status = if device.failures >= threshold {
                 Status::Down
             } else {
@@ -28,6 +30,7 @@ pub fn apply(map: &mut Map, id: u64, result: ProbeResult) {
             device.status = Status::Unknown;
             device.failures = 0;
             device.last_method = reason;
+            device.last_latency_us = None;
         }
     }
     if device.status != Status::Unknown {
@@ -74,7 +77,15 @@ mod tests {
             ProbeResult::Unknown("Rete locale non disponibile".into()),
         );
         assert_eq!(map.devices[0].failures, 0);
-        apply(&mut map, id, ProbeResult::Responding("TCP".into()));
+        apply(
+            &mut map,
+            id,
+            ProbeResult::Responding {
+                method: "TCP".into(),
+                latency: std::time::Duration::from_micros(950),
+            },
+        );
+        assert_eq!(map.devices[0].last_latency_us, Some(950));
         assert_eq!(
             (map.devices[0].status, map.devices[0].position),
             (Status::Up, position)

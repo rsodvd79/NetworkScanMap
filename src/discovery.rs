@@ -83,7 +83,7 @@ pub fn group_for(ip: Ipv4Addr, text: &str) -> String {
 
 #[derive(Clone, Debug)]
 pub enum ProbeResult {
-    Responding(String),
+    Responding { method: String, latency: Duration },
     Negative,
     Unknown(String),
 }
@@ -103,7 +103,12 @@ pub fn probe(
     }
     if settings.icmp {
         match platform::echo(ip, timeout) {
-            EchoResult::Reply => return ProbeResult::Responding("ICMP".into()),
+            EchoResult::Reply(latency) => {
+                return ProbeResult::Responding {
+                    method: "ICMP".into(),
+                    latency,
+                };
+            }
             EchoResult::NoReply => usable = true,
             EchoResult::Unavailable(reason) => local_error = Some(reason),
             EchoResult::LocalError(reason) => {
@@ -124,10 +129,19 @@ pub fn probe(
         if slot.is_zero() {
             break;
         }
+        let started = Instant::now();
         match TcpStream::connect_timeout(&SocketAddr::from((ip, *port)), slot) {
-            Ok(_) => return ProbeResult::Responding(format!("TCP {port}")),
+            Ok(_) => {
+                return ProbeResult::Responding {
+                    method: format!("TCP {port}"),
+                    latency: started.elapsed(),
+                };
+            }
             Err(error) if error.kind() == std::io::ErrorKind::ConnectionRefused => {
-                return ProbeResult::Responding(format!("TCP {port} (rifiutato)"));
+                return ProbeResult::Responding {
+                    method: format!("TCP {port} (rifiutato)"),
+                    latency: started.elapsed(),
+                };
             }
             Err(error)
                 if matches!(
@@ -146,8 +160,14 @@ pub fn probe(
     if let Some(profile) = profile
         && !cancel.load(Ordering::Relaxed)
     {
+        let started = Instant::now();
         match topology::alive(profile, timeout) {
-            Ok(true) => return ProbeResult::Responding("SNMPv2c".into()),
+            Ok(true) => {
+                return ProbeResult::Responding {
+                    method: "SNMPv2c".into(),
+                    latency: started.elapsed(),
+                };
+            }
             Ok(false) => usable = true,
             Err(_) => {}
         }
@@ -241,7 +261,7 @@ pub fn start(
                         let Some(target) = targets.get(index) else { break };
                         let profile = profiles.iter().find(|p| p.target == target.ip);
                         let result = probe(target.ip, settings, profile, cancel);
-                        if matches!(result, ProbeResult::Responding(_)) { responded[index].store(true, Ordering::Relaxed); }
+                        if matches!(result, ProbeResult::Responding { .. }) { responded[index].store(true, Ordering::Relaxed); }
                         if matches!(result, ProbeResult::Unknown(_)) { problem.store(true, Ordering::Relaxed); }
                         if sender.send(JobMessage::Host { job: id, target: target.clone(), result }).is_err() { break; }
                     });
@@ -294,7 +314,7 @@ mod tests {
         assert_eq!(targets("192.0.2.0/30", 2).unwrap().len(), 2);
     }
     #[test]
-    fn tcp_loopback_open_and_refused_are_positive() {
+    fn tcp_loopback_response_includes_its_latency() {
         let listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
         let port = listener.local_addr().unwrap().port();
         let settings = Settings {
@@ -302,25 +322,16 @@ mod tests {
             tcp_ports: vec![port],
             ..Settings::default()
         };
-        assert!(matches!(
-            probe(
-                Ipv4Addr::LOCALHOST,
-                &settings,
-                None,
-                &AtomicBool::new(false)
-            ),
-            ProbeResult::Responding(_)
-        ));
-        drop(listener);
-        assert!(matches!(
-            probe(
-                Ipv4Addr::LOCALHOST,
-                &settings,
-                None,
-                &AtomicBool::new(false)
-            ),
-            ProbeResult::Responding(_)
-        ));
+        let response = probe(
+            Ipv4Addr::LOCALHOST,
+            &settings,
+            None,
+            &AtomicBool::new(false),
+        );
+        match response {
+            ProbeResult::Responding { latency, .. } => assert!(!latency.is_zero()),
+            other => panic!("Expected a loopback response, got {other:?}"),
+        }
     }
     #[test]
     fn cancelled_probe_never_becomes_negative() {

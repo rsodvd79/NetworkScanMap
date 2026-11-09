@@ -1,7 +1,8 @@
 use crate::{
     diagram::Diagram,
     discovery::{self, Job, JobMessage, ProbeResult, Target},
-    model::{Link, LinkKind, Map, Observation, Status, now},
+    mac,
+    model::{Link, LinkKind, Map, Observation, Status, latency_label, now},
     monitor,
     platform::{self, NetworkInfo},
     storage,
@@ -459,7 +460,7 @@ impl NetworkApp {
                             a.results.push((target.id, result.clone()));
                         }
                     }
-                    if scan && let ProbeResult::Responding(method) = result {
+                    if scan && let ProbeResult::Responding { ref method, .. } = result {
                         let mac = neighbor_mac(&self.info, target.ip, &self.map.settings.interface);
                         let id = self.map.merge(Observation {
                             ip: Some(target.ip),
@@ -469,14 +470,16 @@ impl NetworkApp {
                             chassis: None,
                             name: String::new(),
                             description: String::new(),
-                            method,
+                            method: method.clone(),
                             responding: true,
                         });
+                        monitor::apply(&mut self.map, id, result.clone());
                         if let Some(active) = &mut self.active {
-                            active
-                                .results
-                                .push((id, ProbeResult::Responding("Scansione".into())));
+                            active.results.push((id, result));
                         }
+                        self.changed();
+                    } else if !scan && let ProbeResult::Responding { .. } = result {
+                        monitor::apply(&mut self.map, target.id, result.clone());
                         self.changed();
                     }
                 }
@@ -539,7 +542,7 @@ impl NetworkApp {
                             if !scan && !cancelled {
                                 for (id, result) in active.results {
                                     let result = if local_problem
-                                        && !matches!(result, ProbeResult::Responding(_))
+                                        && !matches!(result, ProbeResult::Responding { .. })
                                     {
                                         ProbeResult::Unknown(
                                             "Ciclo incompleto / problema locale".into(),
@@ -547,7 +550,9 @@ impl NetworkApp {
                                     } else {
                                         result
                                     };
-                                    monitor::apply(&mut self.map, id, result);
+                                    if !matches!(result, ProbeResult::Responding { .. }) {
+                                        monitor::apply(&mut self.map, id, result);
+                                    }
                                 }
                             }
                             if scan {
@@ -841,6 +846,23 @@ impl NetworkApp {
                 "MAC: {}",
                 device.mac.as_deref().unwrap_or("Non disponibile")
             ));
+            if let Some(details) = device.mac.as_deref().and_then(mac::describe) {
+                ui.label(format!("Tipo MAC: {}", details.address_type));
+                ui.label(format!("Prefisso: {}", details.prefix));
+                if let Some(manufacturer) = details.manufacturer {
+                    ui.label(format!("Produttore probabile (OUI): {manufacturer}"));
+                } else if details.address_type.starts_with("Unicast locale") {
+                    ui.label("Produttore non deducibile da un MAC locale/randomizzato");
+                } else if details.address_type == "Unicast universale" {
+                    ui.label("Produttore non presente nell'elenco OUI integrato");
+                }
+            }
+            ui.label(format!(
+                "Tempo risposta ultima sonda: {}",
+                device
+                    .last_latency_us
+                    .map_or_else(|| "non disponibile".into(), latency_label)
+            ));
             ui.label(format!(
                 "Chassis: {}",
                 device.chassis.as_deref().unwrap_or("Non disponibile")
@@ -929,6 +951,7 @@ impl NetworkApp {
 impl eframe::App for NetworkApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        ctx.request_repaint_after(Duration::from_secs(1));
         self.poll(&ctx);
         let frame_gap = self.last_frame.elapsed();
         self.last_frame = Instant::now();
@@ -1315,7 +1338,10 @@ mod tests {
                     id: 0,
                     ip: Ipv4Addr::LOCALHOST,
                 },
-                result: ProbeResult::Responding("TCP".into()),
+                result: ProbeResult::Responding {
+                    method: "TCP".into(),
+                    latency: Duration::from_millis(1),
+                },
             })
             .unwrap();
         app.poll(&egui::Context::default());
@@ -1352,6 +1378,46 @@ mod tests {
             (app.map.devices[0].status, app.map.devices[0].failures),
             (Status::Up, 0)
         );
+    }
+
+    #[test]
+    fn monitor_response_updates_latency_before_the_cycle_finishes() {
+        let mut app = NetworkApp::new(false, false);
+        let id = app.map.merge(Observation {
+            ip: Some(Ipv4Addr::LOCALHOST),
+            context: "t".into(),
+            group: "t".into(),
+            mac: None,
+            chassis: None,
+            name: String::new(),
+            description: String::new(),
+            method: String::new(),
+            responding: false,
+        });
+        app.active = Some(active(1, false));
+        app.sender
+            .send(JobMessage::Host {
+                job: 1,
+                target: Target {
+                    id,
+                    ip: Ipv4Addr::LOCALHOST,
+                },
+                result: ProbeResult::Responding {
+                    method: "ICMP".into(),
+                    latency: Duration::from_micros(420),
+                },
+            })
+            .unwrap();
+        app.poll(&egui::Context::default());
+
+        assert_eq!(
+            (
+                app.map.devices[0].status,
+                app.map.devices[0].last_latency_us
+            ),
+            (Status::Up, Some(420))
+        );
+        app.active = None;
     }
 
     #[test]

@@ -1,0 +1,537 @@
+{
+  "version": 1,
+  "settings": {
+    "networks": "192.168.0.0/24\n192.168.1.0/24\n192.168.2.0/24\n192.168.3.0/24\n192.168.4.0/24",
+    "context": "Rete principale",
+    "interface": "",
+    "max_addresses": 4096,
+    "concurrency": 32,
+    "timeout_ms": 1000,
+    "interval_secs": 30,
+    "failure_threshold": 3,
+    "tcp_ports": [
+      22,
+      80,
+      443
+    ],
+    "icmp": true
+  },
+  "devices": [
+    {
+      "id": 1,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.1",
+      "mac": "b4:b0:24:ee:69:9f",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        368.45267,
+        -75.47449
+      ],
+      "last_seen": 1794232928,
+      "last_method": "TCP 80",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 2,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.100",
+      "mac": "4c:e6:76:2e:71:42",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        1.712531,
+        -210.76889
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 3,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.112",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        381.26987,
+        -209.95627
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 4,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.118",
+      "mac": "a0:8c:fd:62:bb:f5",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        633.9998,
+        -204.46713
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 5,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.111",
+      "mac": "e8:d8:d1:b8:a1:30",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        918.29224,
+        -183.8832
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 6,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.123",
+      "mac": "c4:65:16:ad:1f:d4",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        915.0939,
+        -78.218925
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 7,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.125",
+      "mac": "f4:39:09:02:43:64",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        905.0368,
+        137.91252
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 8,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.121",
+      "mac": "f4:39:09:1b:dd:57",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        911.4442,
+        25.386826
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 9,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.127",
+      "mac": "dc:4a:3e:84:40:dc",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        -0.68613124,
+        -97.60584
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 10,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.124",
+      "mac": "78:8c:b5:5f:80:b3",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        -0.7391163,
+        7.4987993
+      ],
+      "last_seen": 1794232928,
+      "last_method": "TCP 80",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 11,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.227",
+      "mac": "a4:bb:6d:5c:8c:02",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        1.8392617,
+        117.153336
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 12,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.233",
+      "mac": "00:80:87:a2:ef:2c",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        692.32104,
+        191.25562
+      ],
+      "last_seen": 1794232928,
+      "last_method": "ICMP",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 13,
+      "context": "Rete principale",
+      "group": "192.168.3.0/24",
+      "ip": "192.168.3.2",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        2.058394,
+        383.70798
+      ],
+      "last_seen": 1794232928,
+      "last_method": "TCP 80",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 14,
+      "context": "Rete principale",
+      "group": "192.168.3.0/24",
+      "ip": "192.168.3.1",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        269.27026,
+        385.19333
+      ],
+      "last_seen": 1794232928,
+      "last_method": "TCP 80",
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 15,
+      "context": "Rete principale",
+      "group": "192.168.1.0/24",
+      "ip": "192.168.1.2",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        538.14636,
+        385.58936
+      ],
+      "last_seen": 1794232928,
+      "last_method": "TCP 80",
+      "historical_status": "Up",
+      "manual": false
+    }
+  ],
+  "links": [
+    {
+      "from": 1,
+      "to": 2,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 2,
+      "last_seen": 1794232457,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 3,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 3,
+      "last_seen": 1794232462,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 4,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 4,
+      "last_seen": 1794232464,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 5,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 5,
+      "last_seen": 1794232466,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 6,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 6,
+      "last_seen": 1794232468,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 7,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 7,
+      "last_seen": 1794232469,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 8,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 8,
+      "last_seen": 1794232471,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 9,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 9,
+      "last_seen": 1794232473,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 13,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Inferred",
+      "evidence": "Route locale via gateway; relazione logica, non cavo diretto",
+      "source": 1,
+      "last_seen": 1794232834,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 14,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Inferred",
+      "evidence": "Route locale via gateway; relazione logica, non cavo diretto",
+      "source": 1,
+      "last_seen": 1794232834,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 10,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 10,
+      "last_seen": 1794232475,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 11,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 11,
+      "last_seen": 1794232485,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 12,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 12,
+      "last_seen": 1794232488,
+      "stale": false
+    },
+    {
+      "from": 13,
+      "to": 14,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 13,
+      "last_seen": 1794232496,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 14,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 14,
+      "last_seen": 1794232633,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 15,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Manual",
+      "evidence": "Collegamento inserito dall'utente",
+      "source": 15,
+      "last_seen": 1794232830,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 15,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Inferred",
+      "evidence": "Route locale via gateway; relazione logica, non cavo diretto",
+      "source": 1,
+      "last_seen": 1794232834,
+      "stale": false
+    }
+  ],
+  "events": [
+    {
+      "time": 1794232369,
+      "message": "Scansione avviata; le informazioni precedenti saranno conservate"
+    },
+    {
+      "time": 1794232384,
+      "message": "Scansione terminata; apparati non ritrovati conservati"
+    },
+    {
+      "time": 1794232427,
+      "message": "Scansione avviata; le informazioni precedenti saranno conservate"
+    },
+    {
+      "time": 1794232475,
+      "message": "Scansione terminata; apparati non ritrovati conservati"
+    },
+    {
+      "time": 1794232754,
+      "message": "Scansione avviata; le informazioni precedenti saranno conservate"
+    },
+    {
+      "time": 1794232834,
+      "message": "Scansione terminata; apparati non ritrovati conservati"
+    }
+  ],
+  "next_id": 16
+}

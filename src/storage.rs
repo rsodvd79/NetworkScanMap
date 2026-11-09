@@ -130,6 +130,7 @@ mod tests {
         });
         map.devices[0].notes = "Nota".into();
         map.devices[0].position = [123.0, 42.0];
+        map.devices[0].last_latency_us = Some(1250);
         save(&path, &map).unwrap();
         let loaded = load(&path).unwrap();
         assert_eq!(
@@ -137,9 +138,16 @@ mod tests {
                 loaded.devices[0].notes.as_str(),
                 loaded.devices[0].position,
                 loaded.devices[0].status,
-                loaded.devices[0].historical_status
+                loaded.devices[0].historical_status,
+                loaded.devices[0].last_latency_us
             ),
-            ("Nota", [123.0, 42.0], Status::Unknown, Status::Up)
+            (
+                "Nota",
+                [123.0, 42.0],
+                Status::Unknown,
+                Status::Up,
+                Some(1250)
+            )
         );
         let bytes = std::fs::read_to_string(path).unwrap();
         assert!(

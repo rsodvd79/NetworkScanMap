@@ -41,7 +41,7 @@ fn loopback_discovery_save_reload_rescan_and_monitor_preserve_manual_data() {
             JobMessage::Host {
                 job,
                 target,
-                result: ProbeResult::Responding(method),
+                result: ProbeResult::Responding { method, .. },
             } => {
                 assert_eq!(job, 7);
                 found = Some(map.merge(Observation {
@@ -108,7 +108,14 @@ fn loopback_discovery_save_reload_rescan_and_monitor_preserve_manual_data() {
         monitor::apply(&mut map, id, ProbeResult::Negative);
     }
     assert_eq!(map.devices[0].status, Status::Down);
-    monitor::apply(&mut map, id, ProbeResult::Responding("TCP".into()));
+    monitor::apply(
+        &mut map,
+        id,
+        ProbeResult::Responding {
+            method: "TCP".into(),
+            latency: Duration::from_micros(800),
+        },
+    );
     assert_eq!(
         (
             map.devices[0].label(),

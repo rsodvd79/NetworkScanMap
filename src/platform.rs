@@ -7,7 +7,7 @@ use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EchoResult {
-    Reply,
+    Reply(Duration),
     NoReply,
     Unavailable(String),
     LocalError(String),
@@ -142,7 +142,7 @@ mod tests {
         let started = std::time::Instant::now();
         let result = echo(Ipv4Addr::LOCALHOST, Duration::from_millis(400));
         assert!(
-            matches!(result, EchoResult::Reply | EchoResult::Unavailable(_)),
+            matches!(result, EchoResult::Reply(_) | EchoResult::Unavailable(_)),
             "{result:?}"
         );
         assert!(started.elapsed() < Duration::from_secs(2));

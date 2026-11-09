@@ -67,7 +67,6 @@ fn reply_matches(packet: &[u8], ip: Ipv4Addr, id: u16, seq: u16, payload: &[u8])
 }
 
 pub(super) fn echo(ip: Ipv4Addr, timeout: Duration) -> EchoResult {
-    let started = Instant::now();
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::ICMPV4));
     #[cfg(target_os = "linux")]
     let (socket, ping_socket) = match socket {
@@ -107,6 +106,7 @@ pub(super) fn echo(ip: Ipv4Addr, timeout: Duration) -> EchoResult {
     let sum = checksum(&packet);
     packet[2..4].copy_from_slice(&sum.to_be_bytes());
     let destination = SocketAddrV4::new(ip, 0).into();
+    let started = Instant::now();
     match socket.send_to(&packet, &destination) {
         Ok(n) if n == packet.len() => {}
         Ok(_) => return EchoResult::LocalError("Incomplete ICMP send".into()),
@@ -190,7 +190,7 @@ fn wait_reply(
             && Ipv4Addr::from(source.0.sin_addr.s_addr.to_ne_bytes()) == ip
             && reply_matches(&buffer[..length as usize], ip, id, seq, payload)
         {
-            return EchoResult::Reply;
+            return EchoResult::Reply(started.elapsed());
         }
     }
 }

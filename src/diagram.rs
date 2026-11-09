@@ -257,10 +257,34 @@ impl Diagram {
                     color,
                 );
             }
+            let mac_details = device
+                .mac
+                .as_deref()
+                .and_then(crate::mac::describe)
+                .map(|details| {
+                    format!(
+                        "Tipo MAC: {}\nPrefisso: {}\nProduttore probabile: {}",
+                        details.address_type,
+                        details.prefix,
+                        details.manufacturer.unwrap_or("non identificato")
+                    )
+                })
+                .unwrap_or_else(|| "Dettagli MAC non disponibili".into());
+            let latency = device.last_latency_us.map_or_else(
+                || "Tempo risposta: non disponibile".into(),
+                |microseconds| {
+                    format!(
+                        "Tempo risposta: {}",
+                        crate::model::latency_label(microseconds)
+                    )
+                },
+            );
             response.on_hover_text(format!(
-                "{}\nMAC: {}\n{}\n{}\nUltima risposta: {:?}\n{}",
+                "{}\nMAC: {}\n{}\n{}\n{}\n{}\nUltima risposta: {:?}\n{}",
                 label,
                 device.mac.as_deref().unwrap_or("Non disponibile"),
+                mac_details,
+                latency,
                 device.status.label(),
                 device.last_method,
                 device.last_seen,

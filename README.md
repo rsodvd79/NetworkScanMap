@@ -58,6 +58,9 @@ cargo run --release --locked -- --demo
 6. Abilitare **Monitoraggio attivo** per gli apparati nel contesto selezionato
    e nelle subnet autorizzate, oppure inseriti manualmente. Il monitoraggio
    si sospende durante una scansione e riprende dopo; termina chiudendo l'app.
+   I dettagli dell'apparato mostrano la latenza dell'ultima risposta ICMP, TCP
+   o SNMP; durante il monitoraggio si aggiorna appena arriva una risposta.
+   Un esito senza risposta valida rimuove la latenza corrente.
 
 Valori iniziali: 4096 indirizzi distinti, 32 worker, timeout 1000 ms, porte
 TCP 22/80/443, monitoraggio ogni 30 secondi, soglia di 3 cicli negativi.
@@ -82,6 +85,10 @@ automatica, e TCP resta il fallback. Una connessione TCP rifiutata e una rispost
 non un timeout. Un host che filtra ogni sonda puo essere invisibile.
 MAC e vicini locali sono arricchimento, non prova di presenza; non viene
 attribuito agli host remoti il MAC del gateway.
+Per i MAC unicast universali l'app mostra il prefisso e, quando riconosciuto,
+un produttore OUI probabile da un elenco integrato parziale. Segnala inoltre
+indirizzi multicast/broadcast e MAC localmente amministrati, spesso randomizzati;
+per questi ultimi non presume un produttore.
 
 ### MAC su macOS 27
 

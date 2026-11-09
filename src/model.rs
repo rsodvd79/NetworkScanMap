@@ -8,6 +8,14 @@ pub fn now() -> u64 {
         .as_secs()
 }
 
+pub fn latency_label(microseconds: u64) -> String {
+    if microseconds == 0 {
+        "<1 ms".into()
+    } else {
+        format!("{:.2} ms", microseconds as f64 / 1000.0)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub networks: String,
@@ -109,6 +117,8 @@ pub struct Device {
     pub position: [f32; 2],
     pub last_seen: Option<u64>,
     pub last_method: String,
+    #[serde(default)]
+    pub last_latency_us: Option<u64>,
     pub historical_status: Status,
     #[serde(default)]
     pub manual: bool,
@@ -311,6 +321,7 @@ impl Map {
                     ],
                     last_seen: None,
                     last_method: String::new(),
+                    last_latency_us: None,
                     historical_status: Status::Unknown,
                     status: Status::Unknown,
                     failures: 0,

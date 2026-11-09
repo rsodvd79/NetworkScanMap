@@ -87,7 +87,7 @@ pub(super) fn echo(ip: Ipv4Addr, timeout: Duration) -> EchoResult {
     if unsafe { std::slice::from_raw_parts(reply.Data.cast::<u8>(), payload.len()) } != payload {
         return EchoResult::LocalError("Windows ICMP returned a mismatched payload".into());
     }
-    EchoResult::Reply
+    EchoResult::Reply(Duration::from_millis(reply.RoundTripTime as u64))
 }
 
 fn interface_name(index: u32) -> String {
