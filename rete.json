@@ -1,7 +1,7 @@
 {
   "version": 1,
   "settings": {
-    "networks": "192.168.0.0/24\n192.168.1.0/24\n192.168.2.0/24\n192.168.3.0/24\n192.168.4.0/24",
+    "networks": "192.168.0.0/24\n192.168.1.0/24\n192.168.2.0/24\n192.168.3.0/24",
     "context": "Rete principale",
     "interface": "",
     "max_addresses": 4096,
@@ -14,7 +14,8 @@
       80,
       443
     ],
-    "icmp": true
+    "icmp": true,
+    "enrich_scan": true
   },
   "devices": [
     {
@@ -29,11 +30,80 @@
       "notes": "",
       "description": "",
       "position": [
-        368.45267,
-        -75.47449
+        509.2958,
+        509.2958
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309513,
       "last_method": "TCP 80",
+      "last_latency_us": 1105,
+      "ping": {
+        "samples": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308851,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.0 200 OK",
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.0 200 OK",
+            "http_server": null,
+            "certificate": {
+              "subject": "C=CN, ST=ShenZhen, L=ShenZhen, CN=TP-Link",
+              "issuer": "C=CN, ST=ShenZhen, L=ShenZhen, CN=TP-Link",
+              "dns_names": [],
+              "not_before": "Jan  1 08:00:24 2018 +00:00",
+              "not_after": "Sep 18 08:00:24 2037 +00:00",
+              "not_before_unix": 1514793624,
+              "not_after_unix": 2136873624
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
@@ -49,11 +119,72 @@
       "notes": "",
       "description": "",
       "position": [
-        1.712531,
-        -210.76889
+        1018.5916,
+        509.2958
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309511,
       "last_method": "ICMP",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": "nasbackup.local",
+        "services": [
+          {
+            "port": 22,
+            "state": "aperta",
+            "hint": "SSH",
+            "banner": "SSH-2.0-OpenSSH_3.7.1p2",
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.0 200 OK",
+            "http_server": "Server HTTP: lighttpd/1.4.32",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": "Handshake TLS non riuscito / incompleto; nessuna verifica di fiducia"
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
@@ -69,11 +200,72 @@
       "notes": "",
       "description": "",
       "position": [
-        381.26987,
-        -209.95627
+        979.8237,
+        704.1949
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309511,
       "last_method": "ICMP",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "nessuna risposta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "nessuna risposta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
@@ -89,11 +281,80 @@
       "notes": "",
       "description": "",
       "position": [
-        633.9998,
-        -204.46713
+        869.42236,
+        869.42236
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309511,
       "last_method": "ICMP",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": "NPI62BBF5.local",
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 505 HTTP Version not supported",
+            "http_server": "Server HTTP: gSOAP/2.7",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.1 505 HTTP Version not supported",
+            "http_server": "Server HTTP: gSOAP/2.7",
+            "certificate": {
+              "subject": "CN=NPI62BBF5, O=Hewlett-Packard Co., OU=A08CFD62BBF5, OU=PHB8J5R7S6",
+              "issuer": "CN=NPI62BBF5, O=Hewlett-Packard Co., OU=A08CFD62BBF5, OU=PHB8J5R7S6",
+              "dns_names": [],
+              "not_before": "Feb  1 00:00:00 2016 +00:00",
+              "not_after": "Feb  1 00:00:00 2026 +00:00",
+              "not_before_unix": 1454284800,
+              "not_after_unix": 1769904000
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
@@ -101,64 +362,93 @@
       "id": 5,
       "context": "Rete principale",
       "group": "192.168.0.0/24",
-      "ip": "192.168.0.111",
-      "mac": "e8:d8:d1:b8:a1:30",
+      "ip": "192.168.0.113",
+      "mac": "4c:cf:7c:dc:e1:63",
       "chassis": null,
       "name": "",
       "custom_name": "",
       "notes": "",
       "description": "",
       "position": [
-        918.29224,
-        -183.8832
+        704.1949,
+        979.8237
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309511,
       "last_method": "ICMP",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 302 Found",
+            "http_server": "Server HTTP: Apache/2.4.54 (Win64) OpenSSL/1.1.1p PHP/8.2.0",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.1 302 Found",
+            "http_server": "Server HTTP: Apache/2.4.54 (Win64) OpenSSL/1.1.1p PHP/8.2.0",
+            "certificate": {
+              "subject": "CN=localhost",
+              "issuer": "CN=localhost",
+              "dns_names": [],
+              "not_before": "Nov 10 23:48:47 2009 +00:00",
+              "not_after": "Nov  8 23:48:47 2019 +00:00",
+              "not_before_unix": 1257896927,
+              "not_after_unix": 1573256927
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
     {
       "id": 6,
-      "context": "Rete principale",
-      "group": "192.168.0.0/24",
-      "ip": "192.168.0.123",
-      "mac": "c4:65:16:ad:1f:d4",
-      "chassis": null,
-      "name": "",
-      "custom_name": "",
-      "notes": "",
-      "description": "",
-      "position": [
-        915.0939,
-        -78.218925
-      ],
-      "last_seen": 1794232928,
-      "last_method": "ICMP",
-      "historical_status": "Up",
-      "manual": false
-    },
-    {
-      "id": 7,
-      "context": "Rete principale",
-      "group": "192.168.0.0/24",
-      "ip": "192.168.0.125",
-      "mac": "f4:39:09:02:43:64",
-      "chassis": null,
-      "name": "",
-      "custom_name": "",
-      "notes": "",
-      "description": "",
-      "position": [
-        905.0368,
-        137.91252
-      ],
-      "last_seen": 1794232928,
-      "last_method": "ICMP",
-      "historical_status": "Up",
-      "manual": false
-    },
-    {
-      "id": 8,
       "context": "Rete principale",
       "group": "192.168.0.0/24",
       "ip": "192.168.0.121",
@@ -169,16 +459,328 @@
       "notes": "",
       "description": "",
       "position": [
-        911.4442,
-        25.386826
+        509.29578,
+        1018.5916
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309511,
       "last_method": "ICMP",
+      "last_latency_us": 1000,
+      "ping": {
+        "samples": [
+          0,
+          1000,
+          1000,
+          1000,
+          1000,
+          1000,
+          1000
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "nessuna risposta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "nessuna risposta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 7,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.111",
+      "mac": "e8:d8:d1:b8:a1:30",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        314.3967,
+        979.8237
+      ],
+      "last_seen": 1794309511,
+      "last_method": "ICMP",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 302 Found",
+            "http_server": "Server HTTP: Apache/2.4.56 (Win64) OpenSSL/1.1.1t PHP/8.2.4",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.1 302 Found",
+            "http_server": "Server HTTP: Apache/2.4.56 (Win64) OpenSSL/1.1.1t PHP/8.2.4",
+            "certificate": {
+              "subject": "CN=localhost",
+              "issuer": "CN=localhost",
+              "dns_names": [],
+              "not_before": "Nov 10 23:48:47 2009 +00:00",
+              "not_after": "Nov  8 23:48:47 2019 +00:00",
+              "not_before_unix": 1257896927,
+              "not_after_unix": 1573256927
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 8,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.123",
+      "mac": "c4:65:16:ad:1f:d4",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        149.16928,
+        869.42236
+      ],
+      "last_seen": 1794309511,
+      "last_method": "ICMP",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          0,
+          0,
+          0,
+          1000,
+          1000,
+          0,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "nessuna risposta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "nessuna risposta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
     {
       "id": 9,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.125",
+      "mac": "f4:39:09:02:43:64",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        38.76779,
+        704.1948
+      ],
+      "last_seen": 1794309511,
+      "last_method": "ICMP",
+      "last_latency_us": 2000,
+      "ping": {
+        "samples": [
+          0,
+          1000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "nessuna risposta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "nessuna risposta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 10,
       "context": "Rete principale",
       "group": "192.168.0.0/24",
       "ip": "192.168.0.127",
@@ -189,16 +791,77 @@
       "notes": "",
       "description": "",
       "position": [
-        -0.68613124,
-        -97.60584
+        0.0,
+        509.29578
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309511,
       "last_method": "ICMP",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          1000,
+          1000,
+          1000,
+          0,
+          1000,
+          1000,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "nessuna risposta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "nessuna risposta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
     {
-      "id": 10,
+      "id": 11,
       "context": "Rete principale",
       "group": "192.168.0.0/24",
       "ip": "192.168.0.124",
@@ -209,16 +872,150 @@
       "notes": "",
       "description": "",
       "position": [
-        -0.7391163,
-        7.4987993
+        38.767853,
+        314.39673
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309512,
       "last_method": "TCP 80",
+      "last_latency_us": 3333,
+      "ping": {
+        "samples": []
+      },
+      "inventory": {
+        "observed_at": 1794308856,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "nessuna risposta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
     {
-      "id": 11,
+      "id": 12,
+      "context": "Rete principale",
+      "group": "192.168.0.0/24",
+      "ip": "192.168.0.110",
+      "mac": "6c:0b:84:25:22:02",
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        149.16934,
+        149.16922
+      ],
+      "last_seen": 1794309513,
+      "last_method": "TCP 80",
+      "last_latency_us": 939,
+      "ping": {
+        "samples": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308857,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 403 Forbidden",
+            "http_server": "Server HTTP: Microsoft-IIS/10.0",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "nessuna risposta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 13,
       "context": "Rete principale",
       "group": "192.168.0.0/24",
       "ip": "192.168.0.227",
@@ -229,16 +1026,88 @@
       "notes": "",
       "description": "",
       "position": [
-        1.8392617,
-        117.153336
+        314.3969,
+        38.76776
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309511,
       "last_method": "ICMP",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308863,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 200 OK",
+            "http_server": "Server HTTP: Microsoft-IIS/10.0",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.1 200 OK",
+            "http_server": "Server HTTP: Microsoft-IIS/10.0",
+            "certificate": {
+              "subject": "CN=*.biemmeapps.com",
+              "issuer": "C=IT, ST=Bergamo, L=Ponte San Pietro, O=Actalis S.p.A., CN=Actalis Domain Validated TLS Server RSA CA 2025",
+              "dns_names": [
+                "biemmeapps.com",
+                "*.biemmeapps.com"
+              ],
+              "not_before": "Oct 30 08:32:32 2026 +00:00",
+              "not_after": "May  3 14:16:32 2027 +00:00",
+              "not_before_unix": 1793349152,
+              "not_after_unix": 1809353792
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
     {
-      "id": 12,
+      "id": 14,
       "context": "Rete principale",
       "group": "192.168.0.0/24",
       "ip": "192.168.0.233",
@@ -249,51 +1118,72 @@
       "notes": "",
       "description": "",
       "position": [
-        692.32104,
-        191.25562
+        509.2958,
+        0.0
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309511,
       "last_method": "ICMP",
-      "historical_status": "Up",
-      "manual": false
-    },
-    {
-      "id": 13,
-      "context": "Rete principale",
-      "group": "192.168.3.0/24",
-      "ip": "192.168.3.2",
-      "mac": null,
-      "chassis": null,
-      "name": "",
-      "custom_name": "",
-      "notes": "",
-      "description": "",
-      "position": [
-        2.058394,
-        383.70798
-      ],
-      "last_seen": 1794232928,
-      "last_method": "TCP 80",
-      "historical_status": "Up",
-      "manual": false
-    },
-    {
-      "id": 14,
-      "context": "Rete principale",
-      "group": "192.168.3.0/24",
-      "ip": "192.168.3.1",
-      "mac": null,
-      "chassis": null,
-      "name": "",
-      "custom_name": "",
-      "notes": "",
-      "description": "",
-      "position": [
-        269.27026,
-        385.19333
-      ],
-      "last_seen": 1794232928,
-      "last_method": "TCP 80",
+      "last_latency_us": 0,
+      "ping": {
+        "samples": [
+          1000,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308864,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 200 OK",
+            "http_server": "Server HTTP: JC-HTTPD/1.12.16",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "nessuna risposta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
     },
@@ -309,13 +1199,1629 @@
       "notes": "",
       "description": "",
       "position": [
-        538.14636,
-        385.58936
+        769.23737,
+        -171.10292
       ],
-      "last_seen": 1794232928,
+      "last_seen": 1794309513,
       "last_method": "TCP 80",
+      "last_latency_us": 2376,
+      "ping": {
+        "samples": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794308867,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 200 OK",
+            "http_server": "Server HTTP: Microsoft-IIS/10.0",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.1 200 OK",
+            "http_server": "Server HTTP: Microsoft-IIS/10.0",
+            "certificate": {
+              "subject": "CN=*.biemmeapps.com",
+              "issuer": "C=IT, ST=Bergamo, L=Ponte San Pietro, O=Actalis S.p.A., CN=Actalis Domain Validated TLS Server RSA CA 2025",
+              "dns_names": [
+                "biemmeapps.com",
+                "*.biemmeapps.com"
+              ],
+              "not_before": "Oct 30 08:32:32 2026 +00:00",
+              "not_after": "May  3 14:16:32 2027 +00:00",
+              "not_before_unix": 1793349152,
+              "not_after_unix": 1809353792
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": null,
       "historical_status": "Up",
       "manual": false
+    },
+    {
+      "id": 16,
+      "context": "Rete principale",
+      "group": "192.168.3.0/24",
+      "ip": "192.168.3.2",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        1282.2261,
+        102.338776
+      ],
+      "last_seen": 1794309513,
+      "last_method": "TCP 80",
+      "last_latency_us": 2732,
+      "ping": {
+        "samples": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794309015,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 200 OK",
+            "http_server": "Server HTTP: Microsoft-IIS/10.0",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.1 200 OK",
+            "http_server": "Server HTTP: Microsoft-IIS/10.0",
+            "certificate": {
+              "subject": "CN=*.biemmeapps.com",
+              "issuer": "C=IT, ST=Bergamo, L=Ponte San Pietro, O=Actalis S.p.A., CN=Actalis Domain Validated TLS Server RSA CA 2025",
+              "dns_names": [
+                "biemmeapps.com",
+                "*.biemmeapps.com"
+              ],
+              "not_before": "Oct 30 08:32:32 2026 +00:00",
+              "not_after": "May  3 14:16:32 2027 +00:00",
+              "not_before_unix": 1793349152,
+              "not_after_unix": 1809353792
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": {
+        "timestamp": 1794309018,
+        "destination": "192.168.3.2",
+        "hops": [
+          {
+            "ttl": 1,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 2,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 3,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 4,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 5,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 6,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 7,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 8,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 9,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 10,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 11,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 12,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 13,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 14,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 15,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 16,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 17,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 18,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 19,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 20,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 21,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 22,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 23,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 24,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 25,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 26,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 27,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 28,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 29,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 30,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          }
+        ],
+        "completed": false,
+        "outcome": "hop_limit",
+        "warnings": []
+      },
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 17,
+      "context": "Rete principale",
+      "group": "192.168.3.0/24",
+      "ip": "192.168.3.1",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        1283.3558,
+        232.00935
+      ],
+      "last_seen": 1794309513,
+      "last_method": "TCP 80",
+      "last_latency_us": 2470,
+      "ping": {
+        "samples": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794309011,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 200 OK",
+            "http_server": "Server HTTP: nginx",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.1 404 Not Found",
+            "http_server": "Server HTTP: nginx",
+            "certificate": {
+              "subject": "C=BE, ST=Antwerp, L=Edegem, O=Technicolor",
+              "issuer": "C=BE, ST=Antwerp, L=Edegem, O=Technicolor",
+              "dns_names": [],
+              "not_before": "Jul  6 15:10:49 2020 +00:00",
+              "not_after": "Jul  4 15:10:49 2030 +00:00",
+              "not_before_unix": 1594048249,
+              "not_after_unix": 1909408249
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": {
+        "timestamp": 1794308970,
+        "destination": "192.168.3.1",
+        "hops": [
+          {
+            "ttl": 1,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 2,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 3,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 4,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 5,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 6,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 7,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 8,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 9,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 10,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 11,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 12,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 13,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 14,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 15,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 16,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 17,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 18,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 19,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 20,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 21,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 22,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 23,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 24,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 25,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 26,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 27,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 28,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 29,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 30,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          }
+        ],
+        "completed": false,
+        "outcome": "hop_limit",
+        "warnings": []
+      },
+      "historical_status": "Up",
+      "manual": false
+    },
+    {
+      "id": 18,
+      "context": "Rete principale",
+      "group": "Fuori subnet / manuali",
+      "ip": "8.8.8.8",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        0.0,
+        1218.5916
+      ],
+      "last_seen": 1794309513,
+      "last_method": "TCP 443",
+      "last_latency_us": 10419,
+      "ping": {
+        "samples": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794309048,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "nessuna risposta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.0 302 Found",
+            "http_server": "Server HTTP: HTTP server (unknown)",
+            "certificate": {
+              "subject": "CN=dns.google",
+              "issuer": "C=US, O=Google Trust Services, CN=WR2",
+              "dns_names": [
+                "dns.google",
+                "dns.google.com",
+                "*.dns.google.com",
+                "8888.google",
+                "dns64.dns.google"
+              ],
+              "not_before": "Oct  7 19:09:50 2026 +00:00",
+              "not_after": "Dec 30 19:09:49 2026 +00:00",
+              "not_before_unix": 1791400190,
+              "not_after_unix": 1798657789
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": {
+        "timestamp": 1794309054,
+        "destination": "8.8.8.8",
+        "hops": [
+          {
+            "ttl": 1,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 2,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 3,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 4,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 5,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 6,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 7,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 8,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 9,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 10,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 11,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 12,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 13,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 14,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 15,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 16,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 17,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 18,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 19,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 20,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 21,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 22,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 23,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 24,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 25,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 26,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 27,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 28,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 29,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 30,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          }
+        ],
+        "completed": false,
+        "outcome": "hop_limit",
+        "warnings": []
+      },
+      "historical_status": "Up",
+      "manual": true
+    },
+    {
+      "id": 19,
+      "context": "Rete principale",
+      "group": "Fuori subnet / manuali",
+      "ip": "1.1.1.1",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        180.0,
+        1218.5916
+      ],
+      "last_seen": 1794309513,
+      "last_method": "TCP 80",
+      "last_latency_us": 9821,
+      "ping": {
+        "samples": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794309149,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.1 301 Moved Permanently",
+            "http_server": "Server HTTP: cloudflare",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.1 301 Moved Permanently",
+            "http_server": "Server HTTP: cloudflare",
+            "certificate": {
+              "subject": "C=US, ST=California, L=San Francisco, O=Cloudflare, Inc., CN=cloudflare-dns.com",
+              "issuer": "C=US, ST=Texas, L=Houston, O=SSL Corp, CN=SSL.com SSL Intermediate CA ECC R2",
+              "dns_names": [
+                "cloudflare-dns.com",
+                "*.cloudflare-dns.com",
+                "one.one.one.one"
+              ],
+              "not_before": "Dec 31 19:20:01 2025 +00:00",
+              "not_after": "Dec 21 19:20:01 2026 +00:00",
+              "not_before_unix": 1767208801,
+              "not_after_unix": 1797880801
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": {
+        "timestamp": 1794309166,
+        "destination": "1.1.1.1",
+        "hops": [
+          {
+            "ttl": 1,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 2,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 3,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 4,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 5,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 6,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 7,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 8,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 9,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 10,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 11,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 12,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 13,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 14,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 15,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 16,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 17,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 18,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 19,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 20,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 21,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 22,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 23,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 24,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 25,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 26,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 27,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 28,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 29,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 30,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          }
+        ],
+        "completed": false,
+        "outcome": "hop_limit",
+        "warnings": []
+      },
+      "historical_status": "Up",
+      "manual": true
+    },
+    {
+      "id": 20,
+      "context": "Rete principale",
+      "group": "Fuori subnet / manuali",
+      "ip": "192.178.194.94",
+      "mac": null,
+      "chassis": null,
+      "name": "",
+      "custom_name": "",
+      "notes": "",
+      "description": "",
+      "position": [
+        360.0,
+        1218.5916
+      ],
+      "last_seen": 1794309513,
+      "last_method": "TCP 80",
+      "last_latency_us": 12138,
+      "ping": {
+        "samples": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "inventory": {
+        "observed_at": 1794309249,
+        "dns_name": null,
+        "mdns_name": null,
+        "services": [
+          {
+            "port": 22,
+            "state": "nessuna risposta",
+            "hint": "SSH",
+            "banner": null,
+            "http_status": null,
+            "http_server": null,
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 80,
+            "state": "aperta",
+            "hint": "HTTP",
+            "banner": null,
+            "http_status": "HTTP/1.0 301 Moved Permanently",
+            "http_server": "Server HTTP: gws",
+            "certificate": null,
+            "note": ""
+          },
+          {
+            "port": 443,
+            "state": "aperta",
+            "hint": "HTTPS",
+            "banner": null,
+            "http_status": "HTTP/1.0 301 Moved Permanently",
+            "http_server": "Server HTTP: gws",
+            "certificate": {
+              "subject": "OU=No SNI provided - please fix your client., CN=invalid2.invalid",
+              "issuer": "OU=No SNI provided - please fix your client., CN=invalid2.invalid",
+              "dns_names": [
+                "invalid2.invalid"
+              ],
+              "not_before": "Oct  7 20:12:16 2026 +00:00",
+              "not_after": "Dec 30 20:12:15 2026 +00:00",
+              "not_before_unix": 1791403936,
+              "not_after_unix": 1798661535
+            },
+            "note": ""
+          }
+        ],
+        "warnings": [],
+        "cancelled": false
+      },
+      "telemetry": {
+        "sampled_at": null,
+        "uptime_ticks": null,
+        "entities": [],
+        "interfaces": [],
+        "vlans": [],
+        "fdb": [],
+        "tables": {}
+      },
+      "trace": {
+        "timestamp": 1794309259,
+        "destination": "192.178.194.94",
+        "hops": [
+          {
+            "ttl": 1,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 2,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 3,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 4,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 5,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 6,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 7,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 8,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 9,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 10,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 11,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 12,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 13,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 14,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 15,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 16,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 17,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 18,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 19,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 20,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 21,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 22,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 23,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 24,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 25,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 26,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 27,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 28,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 29,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          },
+          {
+            "ttl": 30,
+            "source": null,
+            "latency_us": null,
+            "outcome": "timeout",
+            "detail": "Windows ICMP error 11010 (no router address returned)"
+          }
+        ],
+        "completed": false,
+        "outcome": "hop_limit",
+        "warnings": []
+      },
+      "historical_status": "Up",
+      "manual": true
     }
   ],
   "links": [
@@ -324,10 +2830,10 @@
       "to": 2,
       "from_port": "",
       "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 2,
-      "last_seen": 1794232457,
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -335,10 +2841,10 @@
       "to": 3,
       "from_port": "",
       "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 3,
-      "last_seen": 1794232462,
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -346,10 +2852,10 @@
       "to": 4,
       "from_port": "",
       "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 4,
-      "last_seen": 1794232464,
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -357,10 +2863,10 @@
       "to": 5,
       "from_port": "",
       "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 5,
-      "last_seen": 1794232466,
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -368,10 +2874,10 @@
       "to": 6,
       "from_port": "",
       "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 6,
-      "last_seen": 1794232468,
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -379,10 +2885,10 @@
       "to": 7,
       "from_port": "",
       "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 7,
-      "last_seen": 1794232469,
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -390,10 +2896,10 @@
       "to": 8,
       "from_port": "",
       "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 8,
-      "last_seen": 1794232471,
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -401,10 +2907,43 @@
       "to": 9,
       "from_port": "",
       "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 9,
-      "last_seen": 1794232473,
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 10,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 11,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 12,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Inferred",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -413,9 +2952,9 @@
       "from_port": "",
       "to_port": "",
       "kind": "Inferred",
-      "evidence": "Route locale via gateway; relazione logica, non cavo diretto",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
       "source": 1,
-      "last_seen": 1794232834,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -424,75 +2963,9 @@
       "from_port": "",
       "to_port": "",
       "kind": "Inferred",
-      "evidence": "Route locale via gateway; relazione logica, non cavo diretto",
+      "evidence": "Gateway come switch LAN presunto in assenza di altri indizi; non prova un cavo diretto",
       "source": 1,
-      "last_seen": 1794232834,
-      "stale": false
-    },
-    {
-      "from": 1,
-      "to": 10,
-      "from_port": "",
-      "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 10,
-      "last_seen": 1794232475,
-      "stale": false
-    },
-    {
-      "from": 1,
-      "to": 11,
-      "from_port": "",
-      "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 11,
-      "last_seen": 1794232485,
-      "stale": false
-    },
-    {
-      "from": 1,
-      "to": 12,
-      "from_port": "",
-      "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 12,
-      "last_seen": 1794232488,
-      "stale": false
-    },
-    {
-      "from": 13,
-      "to": 14,
-      "from_port": "",
-      "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 13,
-      "last_seen": 1794232496,
-      "stale": false
-    },
-    {
-      "from": 1,
-      "to": 14,
-      "from_port": "",
-      "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 14,
-      "last_seen": 1794232633,
-      "stale": false
-    },
-    {
-      "from": 1,
-      "to": 15,
-      "from_port": "",
-      "to_port": "",
-      "kind": "Manual",
-      "evidence": "Collegamento inserito dall'utente",
-      "source": 15,
-      "last_seen": 1794232830,
+      "last_seen": 1794308914,
       "stale": false
     },
     {
@@ -503,35 +2976,61 @@
       "kind": "Inferred",
       "evidence": "Route locale via gateway; relazione logica, non cavo diretto",
       "source": 1,
-      "last_seen": 1794232834,
+      "last_seen": 1794308914,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 16,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Inferred",
+      "evidence": "Route locale via gateway; relazione logica, non cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
+      "stale": false
+    },
+    {
+      "from": 1,
+      "to": 17,
+      "from_port": "",
+      "to_port": "",
+      "kind": "Inferred",
+      "evidence": "Route locale via gateway; relazione logica, non cavo diretto",
+      "source": 1,
+      "last_seen": 1794308914,
       "stale": false
     }
   ],
   "events": [
     {
-      "time": 1794232369,
+      "time": 1794308760,
       "message": "Scansione avviata; le informazioni precedenti saranno conservate"
     },
     {
-      "time": 1794232384,
+      "time": 1794308824,
       "message": "Scansione terminata; apparati non ritrovati conservati"
     },
     {
-      "time": 1794232427,
+      "time": 1794308850,
       "message": "Scansione avviata; le informazioni precedenti saranno conservate"
     },
     {
-      "time": 1794232475,
+      "time": 1794308914,
       "message": "Scansione terminata; apparati non ritrovati conservati"
     },
     {
-      "time": 1794232754,
-      "message": "Scansione avviata; le informazioni precedenti saranno conservate"
+      "time": 1794309386,
+      "message": "1.1.1.1: ? Sconosciuto -> + Raggiungibile"
     },
     {
-      "time": 1794232834,
-      "message": "Scansione terminata; apparati non ritrovati conservati"
+      "time": 1794309386,
+      "message": "192.178.194.94: ? Sconosciuto -> + Raggiungibile"
+    },
+    {
+      "time": 1794309386,
+      "message": "8.8.8.8: ? Sconosciuto -> + Raggiungibile"
     }
   ],
-  "next_id": 16
+  "next_id": 21
 }

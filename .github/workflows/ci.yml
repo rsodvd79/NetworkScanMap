@@ -1,5 +1,9 @@
 name: Rust desktop
-on: [push, pull_request]
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
 permissions:
   contents: read
 jobs:
@@ -7,7 +11,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            artifact: macos
+          - os: windows-latest
+            artifact: windows
+          - os: ubuntu-latest
+            artifact: linux
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -22,3 +32,33 @@ jobs:
       - run: cargo test --locked
       - run: cargo clippy --all-targets --all-features --locked -- -D warnings
       - run: cargo build --release --locked
+      - name: Package macOS/Linux release
+        if: startsWith(github.ref, 'refs/tags/') && runner.os != 'Windows'
+        run: zip -j network-scan-map-${{ matrix.artifact }}.zip target/release/network-scan-map
+      - name: Package Windows release
+        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path target/release/network-scan-map.exe -DestinationPath network-scan-map-${{ matrix.artifact }}.zip
+      - name: Upload release package
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.artifact }}
+          path: network-scan-map-${{ matrix.artifact }}.zip
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: release-*
+          merge-multiple: true
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release-assets/*.zip --generate-notes
