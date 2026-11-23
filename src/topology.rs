@@ -49,6 +49,7 @@ impl Default for Snapshot {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Adjacency {
+    pub protocol: &'static str,
     pub local_port: String,
     pub remote_chassis: String,
     pub remote_port: String,
@@ -77,6 +78,7 @@ const CHASSIS_ID: &[u32] = &[1, 0, 8802, 1, 1, 2, 1, 3, 2, 0];
 const LLDP_LOCAL: &[u32] = &[1, 0, 8802, 1, 1, 2, 1, 3, 7, 1];
 const LLDP_REMOTE: &[u32] = &[1, 0, 8802, 1, 1, 2, 1, 4, 1, 1];
 const LLDP_MANAGEMENT: &[u32] = &[1, 0, 8802, 1, 1, 2, 1, 4, 2, 1];
+const CDP_CACHE: &[u32] = &[1, 3, 6, 1, 4, 1, 9, 9, 23, 1, 2, 1, 1];
 const IF_NAME: &[u32] = &[1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 1];
 const IF_DESCRIPTION: &[u32] = &[1, 3, 6, 1, 2, 1, 2, 2, 1, 2];
 const BRIDGE_PORT: &[u32] = &[1, 3, 6, 1, 2, 1, 17, 1, 4, 1, 2];
@@ -434,6 +436,14 @@ fn valid_row(root: &[u32], index: &[u32], value: &Cell) -> bool {
             && index[6..].iter().all(|n| *n <= 255)
             && numeric == matches!(index[0], 1 | 3 | 4);
     }
+    if root == CDP_CACHE {
+        return matches!(index, [1..=30, 1..=u32::MAX, 1..=u32::MAX])
+            && match index[0] {
+                3 => numeric,
+                4..=8 => matches!(value, Cell::Bytes(_)),
+                _ => true,
+            };
+    }
     if root == BRIDGE_FDB || root == Q_FDB {
         let offset = usize::from(root == Q_FDB) + 1;
         return index.len() == offset + 6
@@ -686,6 +696,7 @@ fn adjacencies(
             valid = false;
         }
         let entry = Adjacency {
+            protocol: "LLDP",
             local_port: ports.get(&index[1]).cloned().unwrap_or_else(|| {
                 valid = false;
                 format!("lldp-port:{}", index[1])
@@ -700,6 +711,47 @@ fn adjacencies(
         if !result.contains(&entry) {
             result.push(entry);
         }
+    }
+    (result, valid)
+}
+
+/// Cisco Discovery Protocol cache (CDP-MIB), keyed by local ifIndex and neighbor index.
+fn cdp_adjacencies(cache: &Table, interfaces: &BTreeMap<u32, String>) -> (Vec<Adjacency>, bool) {
+    let indices = cache
+        .keys()
+        .filter_map(|key| match key.as_slice() {
+            [_, interface, neighbor] => Some([*interface, *neighbor]),
+            _ => None,
+        })
+        .collect::<BTreeSet<_>>();
+    let mut valid = cache.keys().all(|key| key.len() == 3);
+    let mut result = Vec::new();
+    for index in indices {
+        let field = |col| {
+            bytes(column(cache, col, &index))
+                .map(text)
+                .filter(|s| !s.is_empty())
+        };
+        let (Some(device), Some(port)) = (field(6), field(7)) else {
+            valid = false;
+            continue;
+        };
+        let remote_ip = number(column(cache, 3, &index))
+            .filter(|kind| *kind == 1)
+            .and_then(|_| bytes(column(cache, 4, &index)))
+            .and_then(ipv4);
+        let Some(local_port) = interfaces.get(&index[0]).cloned() else {
+            valid = false;
+            continue;
+        };
+        result.push(Adjacency {
+            protocol: "CDP",
+            local_port,
+            remote_chassis: format!("cdp:{device}"),
+            remote_port: port,
+            remote_name: device,
+            remote_ip,
+        });
     }
     (result, valid)
 }
@@ -857,6 +909,7 @@ pub fn collect(profile: &Profile, timeout: Duration, cancel: &AtomicBool) -> Res
         "LLDP gestione",
         LLDP_MANAGEMENT,
     );
+    let cdp = table(&mut collector, &mut snapshot, "CDP", CDP_CACHE);
     let names = table(&mut collector, &mut snapshot, "IF-MIB nomi", IF_NAME);
     let descriptions = table(
         &mut collector,
@@ -869,6 +922,15 @@ pub fn collect(profile: &Profile, timeout: Duration, cancel: &AtomicBool) -> Res
     let ports = local_ports(&local);
     let (neighbors, valid) = adjacencies(&remote, &management, &ports);
     snapshot.neighbors = neighbors;
+    let (cdp_neighbors, cdp_valid) = cdp_adjacencies(&cdp, &interfaces);
+    snapshot.neighbors.extend(cdp_neighbors);
+    if !cdp_valid {
+        warning(
+            &mut snapshot,
+            "CDP",
+            Err(anyhow!("Righe incomplete o interfacce non risolte")),
+        );
+    }
     if !valid {
         warning(
             &mut snapshot,
@@ -1212,6 +1274,29 @@ mod tests {
         assert_eq!(entries[0].local_port, "Gi1/1");
         assert_eq!(entries[0].remote_ip, Some(Ipv4Addr::new(192, 0, 2, 9)));
         assert_eq!(entries[1].remote_ip, None);
+    }
+
+    #[test]
+    fn cdp_cache_yields_named_neighbor_with_ipv4_and_rejects_unresolved_interfaces() {
+        let mut cache = Table::new();
+        let index = [7, 1];
+        put(&mut cache, 3, &index, Cell::Number(1));
+        put(&mut cache, 4, &index, Cell::Bytes(vec![192, 0, 2, 20]));
+        put(&mut cache, 6, &index, Cell::Bytes(b"core-sw".to_vec()));
+        put(&mut cache, 7, &index, Cell::Bytes(b"Gi0/1".to_vec()));
+        for (key, value) in &cache {
+            assert!(valid_row(CDP_CACHE, key, value));
+        }
+        let interfaces = BTreeMap::from([(7, "Gi1/0/7".to_string())]);
+        let (entries, valid) = cdp_adjacencies(&cache, &interfaces);
+        assert!(valid);
+        assert_eq!(entries[0].protocol, "CDP");
+        assert_eq!(entries[0].local_port, "Gi1/0/7");
+        assert_eq!(entries[0].remote_chassis, "cdp:core-sw");
+        assert_eq!(entries[0].remote_ip, Some(Ipv4Addr::new(192, 0, 2, 20)));
+        let (entries, valid) = cdp_adjacencies(&cache, &BTreeMap::new());
+        assert!(!valid && entries.is_empty());
+        assert!(!valid_row(CDP_CACHE, &[6, 7, 1], &Cell::Number(1)));
     }
 
     #[test]

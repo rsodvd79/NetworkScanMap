@@ -81,21 +81,21 @@ cargo run --release --locked -- --demo
    statistiche ping** nei dettagli avvia una nuova finestra di misure.
 
 Valori iniziali: 4096 indirizzi distinti, 32 worker, timeout 1000 ms, porte
-TCP 22/80/443, monitoraggio ogni 30 secondi, soglia di 3 cicli negativi.
+TCP 22/80/443/631, monitoraggio ogni 30 secondi, soglia di 3 cicli negativi.
 Il timeout e per fase ICMP/TCP/SNMP; la durata totale del ciclo dipende da
 apparati, sonde e interrogazioni topologiche. Non si accodano cicli sovrapposti.
 Il registro mantiene gli ultimi 10000 eventi, con timestamp Unix in secondi.
 
 ## Inventario e diagnostica di rete
 
-Selezionare un apparato e usare **Raccogli nomi, servizi e TLS** oppure
+Selezionare un apparato e usare **Raccogli inventario di rete** oppure
 **Traceroute (max 30 hop)** nei dettagli. La raccolta e asincrona e annullabile;
 non parte all'avvio o al caricamento della mappa. E consentita solo per IPv4
 univoci nel contesto selezionato e nelle subnet configurate, oppure aggiunti
 manualmente. Gli indirizzi pubblicizzati nelle risposte non diventano nuove
 destinazioni di scansione.
 
-L'opzione **Inventario DNS/mDNS/NetBIOS, servizi e TLS durante la scansione**, inizialmente
+L'opzione **Inventario di rete (nomi, protocolli, servizi e TLS) durante la scansione**, inizialmente
 disabilitata, raccoglie gli stessi dati sui soli apparati rispondenti:
 
 - **DNS inverso e dominio**: query PTR ai resolver della configurazione di
@@ -112,6 +112,21 @@ disabilitata, raccoglie gli stessi dati sui soli apparati rispondenti:
   I byte non ASCII dei nomi OEM sono mostrati come `\xHH`, senza presumere una
   code page. Risposte assenti o filtrate non dimostrano che l'apparato sia spento.
   I dati NetBIOS sono salvati nella mappa; quelle precedenti restano compatibili.
+- **NTP**: richiesta client unicast UDP 123; mostra stratum, riferimento,
+  stato di sincronizzazione, offset rispetto a questo PC e ritardo. L'offset
+  dipende dall'orologio locale.
+- **SSDP/UPnP**: M-SEARCH unicast UDP 1900 (non multicast). L'URL di descrizione
+  e letto solo se punta all'indirizzo interrogato; produttore, modello, seriale e
+  tipo derivano dall'XML.
+- **WS-Discovery/ONVIF**: Probe unicast UDP 3702; mostra tipi e scope ONVIF
+  (nome, hardware, posizione, profili). Gli indirizzi di servizio annunciati
+  vengono solo elencati, mai contattati.
+- **SMB**: solo se la porta 445 e configurata. Negoziazione SMB2 piu messaggio
+  NTLM di sola presentazione, senza credenziali ne sessione: dialetto, firma
+  richiesta, GUID, uptime stimato, nome computer/dominio e versione NT dichiarati.
+  Non vengono elencate condivisioni o utenti.
+- **IPP**: solo se la porta 631 e configurata. Get-Printer-Attributes in HTTP
+  semplice: modello, nome, stato, firmware e livelli dei materiali di consumo.
 - **Servizi TCP**: vengono verificate tutte e sole le porte configurate
   (massimo 16), distinguendo aperta, rifiutata, senza risposta ed errore.
   L'associazione porta/servizio e indicata come indizio, non come identificazione
@@ -146,7 +161,7 @@ viene segnalata.
 
 ## Interpretazione corretta
 
-- **Blu continuo**: adiacenza pubblicata in LLDP-MIB, con porte e fonte.
+- **Blu continuo**: adiacenza pubblicata in LLDP-MIB o CDP-MIB (cache CDP Cisco letta via SNMP, senza ascolto di frame), con porte e fonte.
 - **Giallo tratteggiato**: relazione dedotta da FDB o route; non prova un
   collegamento fisico diretto. I raggruppamenti subnet sono esclusivamente logici.
   Nella LAN, in assenza di altre evidenze attive, il gateway dell'interfaccia
@@ -194,7 +209,7 @@ https://developer.apple.com/forums/thread/841958
 
 SNMPv2c **non cifra la community**: usare solo reti di gestione fidate.
 Non si eseguono SET, tentativi con community predefinite o discovery oltre i
-range configurati. Le tabelle LLDP richiedono switch gestiti e accesso alle MIB;
+range configurati. Le tabelle LLDP/CDP richiedono switch gestiti e accesso alle MIB;
 FDB e VLAN non garantiscono la posizione fisica degli host. Vicini senza IP
 possono essere rappresentati, ma non monitorati. La mappa e inevitabilmente
 parziale su apparati non gestiti o senza credenziali.

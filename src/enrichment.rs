@@ -29,6 +29,9 @@ pub struct Report {
     pub mdns_name: Option<String>,
     #[serde(default)]
     pub netbios: Option<crate::netbios::Node>,
+    /// NTP, SSDP/UPnP, WS-Discovery/ONVIF, SMB and IPP observations.
+    #[serde(default)]
+    pub details: Vec<crate::probe::Info>,
     pub services: Vec<Service>,
     pub warnings: Vec<String>,
     pub cancelled: bool,
@@ -86,6 +89,10 @@ impl Report {
         );
         if let Some(node) = &self.netbios {
             node.validate()?;
+        }
+        anyhow::ensure!(self.details.len() <= 8, "Inventario rete troppo grande");
+        for info in &self.details {
+            info.validate()?;
         }
         let valid =
             |text: &str| text.chars().count() <= MAX_TEXT && !text.chars().any(char::is_control);
@@ -156,6 +163,10 @@ impl Report {
             || "NetBIOS: non disponibile".into(),
             crate::netbios::Node::summary,
         ));
+        if self.details.is_empty() {
+            lines.push("NTP, SSDP/UPnP, WS-Discovery, SMB, IPP: nessuna risposta".into());
+        }
+        lines.extend(self.details.iter().map(crate::probe::Info::summary));
         for service in &self.services {
             lines.push(format!(
                 "TCP {}: {} - {} (indizio da porta)",
@@ -546,6 +557,27 @@ pub fn collect(ip: Ipv4Addr, ports: &[u16], timeout: Duration, cancel: &AtomicBo
         .collect::<Vec<_>>();
     ports.sort_unstable();
     ports.dedup();
+    type Probe = fn(Ipv4Addr, Duration, &AtomicBool) -> Option<crate::probe::Info>;
+    let udp: [Probe; 3] = [crate::probe::ntp, crate::probe::ssdp, crate::probe::wsd];
+    // Connection-oriented protocols run only on ports the user configured.
+    let tcp: [(u16, Probe); 2] = [(445, crate::smb::collect), (631, crate::ipp::collect)];
+    let probes = udp
+        .into_iter()
+        .map(|probe| (probe, Duration::from_millis(500)))
+        .chain(
+            tcp.into_iter()
+                .filter(|(port, _)| ports.contains(port))
+                .map(|(_, probe)| (probe, timeout)),
+        );
+    for (probe, cap) in probes {
+        let budget = timeout
+            .min(cap)
+            .min(deadline.saturating_duration_since(Instant::now()));
+        if cancel.load(Ordering::Relaxed) {
+            break;
+        }
+        result.details.extend(probe(ip, budget, cancel));
+    }
     for port in ports {
         let budget = timeout.min(deadline.saturating_duration_since(Instant::now()));
         if budget.is_zero() || cancel.load(Ordering::Relaxed) {
@@ -568,6 +600,28 @@ pub fn collect(ip: Ipv4Addr, ports: &[u16], timeout: Duration, cancel: &AtomicBo
 mod tests {
     use super::*;
     use hickory_resolver::proto::rr::{Record, rdata::PTR};
+
+    #[test]
+    fn protocol_details_persist_validate_and_load_from_older_reports() {
+        let mut info = crate::probe::Info::new("NTP (UDP 123)");
+        info.add("Stratum", "2");
+        let report = Report {
+            observed_at: 1,
+            details: vec![info],
+            ..Default::default()
+        };
+        let restored: Report =
+            serde_json::from_slice(&serde_json::to_vec(&report).unwrap()).unwrap();
+        restored.validate().unwrap();
+        assert!(restored.summary().contains("Stratum: 2"));
+        let mut legacy = serde_json::to_value(&report).unwrap();
+        legacy.as_object_mut().unwrap().remove("details");
+        let legacy: Report = serde_json::from_value(legacy).unwrap();
+        assert!(legacy.summary().contains("SMB, IPP: nessuna risposta"));
+        let mut bad = restored;
+        bad.details[0].fields[0].1 = "x\ny".into();
+        assert!(bad.validate().is_err());
+    }
 
     #[test]
     fn mdns_accepts_only_matching_reverse_ptr_and_rejects_malformed_packets() {

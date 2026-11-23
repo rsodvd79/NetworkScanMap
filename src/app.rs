@@ -47,6 +47,14 @@ struct Active {
     results: Vec<(u64, ProbeReport)>,
 }
 
+fn ports_label(ports: &[u16]) -> String {
+    ports
+        .iter()
+        .map(u16::to_string)
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 pub struct NetworkApp {
     pub map: Map,
     diagram: Diagram,
@@ -123,6 +131,7 @@ impl NetworkApp {
         if demo {
             diagram.rearrange(&mut map);
         }
+        let ports_text = ports_label(&map.settings.tcp_ports);
         Self {
             map,
             diagram,
@@ -145,7 +154,7 @@ impl NetworkApp {
             snmp_port: 161,
             snmp_target: String::new(),
             manual_ip: String::new(),
-            ports_text: "22,80,443".into(),
+            ports_text,
             error: String::new(),
             pending: None,
             continue_after_save: false,
@@ -179,14 +188,7 @@ impl NetworkApp {
         self.profiles.clear();
         self.community.clear();
         self.file_path = path;
-        self.ports_text = self
-            .map
-            .settings
-            .tcp_ports
-            .iter()
-            .map(u16::to_string)
-            .collect::<Vec<_>>()
-            .join(",");
+        self.ports_text = ports_label(&self.map.settings.tcp_ports);
         self.diagram = Diagram::default();
         self.delete_device = None;
         self.revision = self.revision.saturating_add(1);
@@ -911,7 +913,7 @@ impl NetworkApp {
             let mut changed = ui
                 .checkbox(&mut settings.icmp, "ICMP (fallback TCP se non disponibile)")
                 .changed();
-            changed |= ui.checkbox(&mut settings.enrich_scan, "Inventario DNS/mDNS/NetBIOS, servizi e TLS durante la scansione").changed();
+            changed |= ui.checkbox(&mut settings.enrich_scan, "Inventario di rete (nomi, protocolli, servizi e TLS) durante la scansione").changed();
             ui.small("Sonde aggiuntive, solo sui dispositivi rispondenti e sulle porte configurate. Nessun accesso autenticato.");
             ui.label("Porte TCP (max 16)");
             if ui.text_edit_singleline(&mut self.ports_text).changed() {
@@ -1111,9 +1113,12 @@ impl NetworkApp {
                 device.ping.samples.clear();
                 changed = true;
             }
-            egui::CollapsingHeader::new("Nomi DNS/mDNS/NetBIOS, servizi e TLS").show(ui, |ui| {
-                ui.label(device.inventory.summary());
-            });
+            egui::CollapsingHeader::new("Inventario: nomi, protocolli, servizi e TLS").show(
+                ui,
+                |ui| {
+                    ui.label(device.inventory.summary());
+                },
+            );
             egui::CollapsingHeader::new("SNMP: apparato, porte, traffico e VLAN").show(ui, |ui| {
                 ui.label(device.telemetry.summary());
             });
@@ -1143,7 +1148,7 @@ impl NetworkApp {
         let authorized = self.inspection_target(id).is_ok();
         let mut inspection = None;
         ui.add_enabled_ui(authorized && self.active.is_none(), |ui| {
-            if ui.button("Raccogli nomi, servizi e TLS").clicked() {
+            if ui.button("Raccogli inventario di rete").clicked() {
                 inspection = Some(discovery::Inspection::Inventory);
             }
             if ui.button("Traceroute (max 30 hop)").clicked() {
@@ -1550,6 +1555,12 @@ mod tests {
             }],
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn startup_port_field_lists_every_default_port() {
+        let app = NetworkApp::new(false, false);
+        assert_eq!(app.ports_text, "22,80,443,631");
     }
 
     #[test]

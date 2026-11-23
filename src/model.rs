@@ -98,7 +98,7 @@ impl Default for Settings {
             timeout_ms: 1000,
             interval_secs: 30,
             failure_threshold: 3,
-            tcp_ports: vec![22, 80, 443],
+            tcp_ports: vec![22, 80, 443, 631],
             icmp: true,
             enrich_scan: false,
         }
@@ -511,7 +511,7 @@ impl Map {
                 .filter(|ip| ip.octets()[0] > 0 && ip.octets()[0] < 224);
             let remote_group = remote_ip
                 .map(|ip| crate::discovery::group_for(ip, &self.settings.networks))
-                .unwrap_or_else(|| "Vicini LLDP".into());
+                .unwrap_or_else(|| format!("Vicini {}", adjacency.protocol));
             let target = self.merge(Observation {
                 ip: remote_ip,
                 context: context.into(),
@@ -523,7 +523,7 @@ impl Map {
                 chassis: Some(adjacency.remote_chassis),
                 name: adjacency.remote_name,
                 description: String::new(),
-                method: "LLDP via SNMP".into(),
+                method: format!("{} via SNMP", adjacency.protocol),
                 responding: false,
             });
             self.add_link(Link {
@@ -532,7 +532,7 @@ impl Map {
                 from_port: adjacency.local_port,
                 to_port: adjacency.remote_port,
                 kind: LinkKind::Observed,
-                evidence: "Adiacenza pubblicata in LLDP-MIB".into(),
+                evidence: format!("Adiacenza pubblicata in {}-MIB", adjacency.protocol),
                 source,
                 last_seen: now(),
                 stale: false,
