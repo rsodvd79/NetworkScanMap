@@ -911,7 +911,7 @@ impl NetworkApp {
             let mut changed = ui
                 .checkbox(&mut settings.icmp, "ICMP (fallback TCP se non disponibile)")
                 .changed();
-            changed |= ui.checkbox(&mut settings.enrich_scan, "Inventario DNS/mDNS, servizi e TLS durante la scansione").changed();
+            changed |= ui.checkbox(&mut settings.enrich_scan, "Inventario DNS/mDNS/NetBIOS, servizi e TLS durante la scansione").changed();
             ui.small("Sonde aggiuntive, solo sui dispositivi rispondenti e sulle porte configurate. Nessun accesso autenticato.");
             ui.label("Porte TCP (max 16)");
             if ui.text_edit_singleline(&mut self.ports_text).changed() {
@@ -1111,7 +1111,7 @@ impl NetworkApp {
                 device.ping.samples.clear();
                 changed = true;
             }
-            egui::CollapsingHeader::new("Nomi, servizi e certificati TLS").show(ui, |ui| {
+            egui::CollapsingHeader::new("Nomi DNS/mDNS/NetBIOS, servizi e TLS").show(ui, |ui| {
                 ui.label(device.inventory.summary());
             });
             egui::CollapsingHeader::new("SNMP: apparato, porte, traffico e VLAN").show(ui, |ui| {

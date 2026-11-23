@@ -207,6 +207,13 @@ impl Device {
             .or(self.inventory.mdns_name.as_ref())
         {
             name.clone()
+        } else if let Some(name) = self
+            .inventory
+            .netbios
+            .as_ref()
+            .and_then(crate::netbios::Node::hostname)
+        {
+            name.into()
         } else {
             self.ip
                 .map_or_else(|| "Vicino LLDP".into(), |ip| ip.to_string())
@@ -568,6 +575,42 @@ impl Map {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn netbios_names_are_persisted_fallbacks_without_replacing_dns_manual_names_or_mac() {
+        let mut map = Map::default();
+        map.merge(observation("00:01:02:03:04:05"));
+        let device = &mut map.devices[0];
+        device.name.clear();
+        device.inventory.observed_at = 123;
+        device.inventory.netbios = Some(crate::netbios::Node {
+            names: vec![crate::netbios::Name {
+                name: "NAS".into(),
+                suffix: 0,
+                group: false,
+                flags: 0x0400,
+            }],
+            reported_mac: Some("02:01:02:03:04:05".into()),
+        });
+        assert_eq!(device.label(), "NAS");
+        assert_eq!(device.mac.as_deref(), Some("00:01:02:03:04:05"));
+        device.inventory.dns_name = Some("nas.example.test".into());
+        assert_eq!(device.label(), "nas.example.test");
+        device.custom_name = "Archivio".into();
+        assert_eq!(device.label(), "Archivio");
+        let restored: Map = serde_json::from_slice(&serde_json::to_vec(&map).unwrap()).unwrap();
+        crate::storage::validate(&restored).unwrap();
+        assert!(
+            restored.devices[0]
+                .inventory
+                .summary()
+                .contains("NAS <00>: nome workstation")
+        );
+        let mut old = serde_json::to_value(&map.devices[0].inventory).unwrap();
+        old.as_object_mut().unwrap().remove("netbios");
+        let old: crate::enrichment::Report = serde_json::from_value(old).unwrap();
+        assert!(old.netbios.is_none());
+    }
 
     #[test]
     fn ping_summary_reports_loss_rtt_and_population_standard_deviation() {

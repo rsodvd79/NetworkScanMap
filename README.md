@@ -95,7 +95,7 @@ univoci nel contesto selezionato e nelle subnet configurate, oppure aggiunti
 manualmente. Gli indirizzi pubblicizzati nelle risposte non diventano nuove
 destinazioni di scansione.
 
-L'opzione **Inventario DNS/mDNS, servizi e TLS durante la scansione**, inizialmente
+L'opzione **Inventario DNS/mDNS/NetBIOS, servizi e TLS durante la scansione**, inizialmente
 disabilitata, raccoglie gli stessi dati sui soli apparati rispondenti:
 
 - **DNS inverso e dominio**: query PTR ai resolver della configurazione di
@@ -104,6 +104,14 @@ disabilitata, raccoglie gli stessi dati sui soli apparati rispondenti:
 - **mDNS**: query PTR unicast legacy alla porta 5353 dell'apparato autorizzato.
   Non viene enumerata tutta la LAN; gli apparati che rispondono solo a multicast
   potrebbero non fornire il nome.
+- **NetBIOS**: query Node Status (NBSTAT) unicast UDP 137, senza broadcast,
+  autenticazione o enumerazione delle condivisioni. Mostra nomi registrati,
+  suffissi/ruoli, gruppo di lavoro o dominio dichiarato e MAC dichiarato, quando
+  disponibili. Il nome workstation attivo viene usato come ripiego nel diagramma
+  dopo DNS/mDNS, senza sostituire nomi personalizzati o identita MAC rilevate.
+  I byte non ASCII dei nomi OEM sono mostrati come `\xHH`, senza presumere una
+  code page. Risposte assenti o filtrate non dimostrano che l'apparato sia spento.
+  I dati NetBIOS sono salvati nella mappa; quelle precedenti restano compatibili.
 - **Servizi TCP**: vengono verificate tutte e sole le porte configurate
   (massimo 16), distinguendo aperta, rifiutata, senza risposta ed errore.
   L'associazione porta/servizio e indicata come indizio, non come identificazione

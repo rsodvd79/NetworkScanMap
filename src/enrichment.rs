@@ -27,6 +27,8 @@ pub struct Report {
     pub observed_at: u64,
     pub dns_name: Option<String>,
     pub mdns_name: Option<String>,
+    #[serde(default)]
+    pub netbios: Option<crate::netbios::Node>,
     pub services: Vec<Service>,
     pub warnings: Vec<String>,
     pub cancelled: bool,
@@ -82,6 +84,9 @@ impl Report {
             self.services.len() <= 16 && self.warnings.len() <= 16,
             "Inventario rete troppo grande"
         );
+        if let Some(node) = &self.netbios {
+            node.validate()?;
+        }
         let valid =
             |text: &str| text.chars().count() <= MAX_TEXT && !text.chars().any(char::is_control);
         anyhow::ensure!(
@@ -147,6 +152,10 @@ impl Report {
                 self.mdns_name.as_deref().unwrap_or("non disponibile")
             ),
         ];
+        lines.push(self.netbios.as_ref().map_or_else(
+            || "NetBIOS: non disponibile".into(),
+            crate::netbios::Node::summary,
+        ));
         for service in &self.services {
             lines.push(format!(
                 "TCP {}: {} - {} (indizio da porta)",
@@ -513,6 +522,15 @@ pub fn collect(ip: Ipv4Addr, ports: &[u16], timeout: Duration, cancel: &AtomicBo
     }
     if !cancel.load(Ordering::Relaxed) {
         result.mdns_name = mdns(ip, timeout.min(Duration::from_millis(500)), cancel);
+    }
+    if !cancel.load(Ordering::Relaxed) {
+        result.netbios = crate::netbios::collect(
+            ip,
+            timeout
+                .min(Duration::from_millis(500))
+                .min(deadline.saturating_duration_since(Instant::now())),
+            cancel,
+        );
     }
     let host = result
         .dns_name

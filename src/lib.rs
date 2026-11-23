@@ -5,6 +5,7 @@ pub mod enrichment;
 pub mod mac;
 pub mod model;
 pub mod monitor;
+pub mod netbios;
 pub mod platform;
 pub mod storage;
 pub mod telemetry;
